@@ -7,17 +7,30 @@ export const selectors = {
     "article[data-qa=\"job-card\"]",
     "article.job-result",
     "li[data-qa=\"search-result\"]",
+    "div[data-qa=\"job-card\"]",
+    "div[class*=\"job-card_jobCard__body\"]",
   ],
-  jobLinkSelector: "a[href*='/jobs/']",
-  fallbackCardClosest: "article, li, div[data-qa], div[data-testid]",
-  titleSelectors: ["h2 a", "h3 a", "a[href*='/jobs/']"],
+  jobLinkSelector:
+    "a[data-qa=\"job-card-title\"], button[data-qa=\"job-title-btn-wrapper\"], a[href*='/jobs/']",
+  fallbackCardClosest:
+    "div[class*=\"job-card_jobCard__body\"], div[data-qa=\"job-card\"], article[data-qa=\"job-card\"], article.job-result, li[data-qa=\"search-result\"], article, li, section",
+  titleSelectors: [
+    "button[data-qa=\"job-title-btn-wrapper\"]",
+    "[data-qa=\"job-card-title\"]",
+    "h2 a",
+    "h3 a",
+    "a[href*='/jobs/']",
+  ],
   companySelectors: [
     "[data-qa=\"company-name\"]",
     "[data-testid=\"company-name\"]",
     ".job-company",
     ".company",
+    "a[data-page-component=\"job_card\"][data-element=\"recruiter\"]",
+    ".gtmJobListingPostedBy",
   ],
   locationSelectors: [
+    "li[data-qa=\"job-card-location\"]",
     "[data-qa=\"location\"]",
     "[data-testid=\"location\"]",
     ".job-location",
@@ -25,8 +38,21 @@ export const selectors = {
   ],
 };
 
+const PREFERRED_CARD_SELECTOR = "div[class*=\"job-card_jobCard__body\"]";
+
 export function matches(url: URL): boolean {
   return url.hostname.endsWith("reed.co.uk") && url.pathname.includes("/jobs");
+}
+
+function preferCards(cards: HTMLElement[]): HTMLElement[] {
+  const preferred = cards.filter((card) => card.matches(PREFERRED_CARD_SELECTOR));
+  return preferred.length > 0 ? preferred : cards;
+}
+
+function dedupeNested(cards: HTMLElement[]): HTMLElement[] {
+  return cards.filter(
+    (card) => !cards.some((other) => other !== card && other.contains(card)),
+  );
 }
 
 export function findCards(root: ParentNode): HTMLElement[] {
@@ -41,7 +67,8 @@ export function findCards(root: ParentNode): HTMLElement[] {
   }
 
   if (cards.size > 0) {
-    return Array.from(cards);
+    const preferred = preferCards(Array.from(cards));
+    return dedupeNested(preferred);
   }
 
   for (const link of root.querySelectorAll(selectors.jobLinkSelector)) {
@@ -54,7 +81,8 @@ export function findCards(root: ParentNode): HTMLElement[] {
     }
   }
 
-  return Array.from(cards);
+  const preferred = preferCards(Array.from(cards));
+  return dedupeNested(preferred);
 }
 
 export function injectBadge(cardEl: HTMLElement, text: string): HTMLElement {
@@ -74,12 +102,23 @@ function getTextFromSelectors(cardEl: HTMLElement, selectorList: string[]): stri
   return "";
 }
 
+function getRemoteLabel(cardEl: HTMLElement): string {
+  const remoteIcon = cardEl.querySelector("svg[aria-labelledby=\"title-remote\"]");
+  if (!remoteIcon) {
+    return "";
+  }
+  const label = remoteIcon.closest("li")?.textContent?.trim();
+  return label ?? "";
+}
+
 export function parseCard(cardEl: HTMLElement): ParsedJobCard {
-  const linkEl = cardEl.querySelector(selectors.jobLinkSelector);
+  const linkEl = cardEl.querySelector("a[data-qa=\"job-card-title\"], a[href*='/jobs/']");
   const jobUrl = linkEl instanceof HTMLAnchorElement ? linkEl.href : "";
   const title = getTextFromSelectors(cardEl, selectors.titleSelectors);
   const company = getTextFromSelectors(cardEl, selectors.companySelectors);
-  const locationText = getTextFromSelectors(cardEl, selectors.locationSelectors);
+  const remoteLabel = getRemoteLabel(cardEl);
+  const locationText =
+    remoteLabel || getTextFromSelectors(cardEl, selectors.locationSelectors);
 
   return {
     title,

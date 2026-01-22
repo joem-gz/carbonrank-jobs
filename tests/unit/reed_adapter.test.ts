@@ -22,6 +22,18 @@ describe("reed adapter", () => {
     expect(cards).toHaveLength(2);
   });
 
+  it("finds cards with job-title button layout", () => {
+    const doc = loadFixture("../fixtures/reed_search_results_button.html");
+    const cards = findCards(doc);
+    expect(cards).toHaveLength(1);
+
+    const parsed = parseCard(cards[0]);
+    expect(parsed.title).toBe("Private Client Tax Senior");
+    expect(parsed.company).toBe("Austin Rose");
+    expect(parsed.locationText).toBe("Work from home");
+    expect(parsed.jobUrl).toBe("https://www.reed.co.uk/jobs/private-client-tax-senior/56365685");
+  });
+
   it("injects a single badge per card", () => {
     const doc = loadFixture("../fixtures/reed_search_results_minimal.html");
     const cards = findCards(doc);
