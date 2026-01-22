@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { findCards, injectBadge } from "../../src/sites/reed/adapter";
+import { findCards, injectBadge, parseCard } from "../../src/sites/reed/adapter";
 import { BADGE_ATTR } from "../../src/ui/badge";
 
 function loadFixture(path: string): Document {
@@ -32,5 +32,27 @@ describe("reed adapter", () => {
 
     const badges = card.querySelectorAll(`[${BADGE_ATTR}]`);
     expect(badges).toHaveLength(1);
+  });
+
+  it("parses job title, company, location, and url", () => {
+    const doc = loadFixture("../fixtures/reed_search_results_minimal.html");
+    const card = findCards(doc)[0];
+    const parsed = parseCard(card);
+
+    expect(parsed.title).toBe("Software Engineer");
+    expect(parsed.company).toBe("Acme Analytics");
+    expect(parsed.locationText).toBe("London SW1A 1AA");
+    expect(parsed.jobUrl).toBe("https://www.reed.co.uk/jobs/software-engineer/12345");
+  });
+
+  it("parses cards using fallback selectors", () => {
+    const doc = loadFixture("../fixtures/reed_search_results_variant.html");
+    const card = findCards(doc)[1];
+    const parsed = parseCard(card);
+
+    expect(parsed.title).toBe("QA Engineer");
+    expect(parsed.company).toBe("Foundry Labs");
+    expect(parsed.locationText).toBe("Leeds LS1 2AA");
+    expect(parsed.jobUrl).toBe("https://www.reed.co.uk/jobs/qa-engineer/222");
   });
 });
