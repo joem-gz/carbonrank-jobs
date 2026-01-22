@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CarbonRank settings</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <h1>CarbonRank</h1>
+      <p class="subtitle">Commute-only CO2e estimate for Reed job cards.</p>
+      <form id="settings-form" novalidate>
+        <label class="field">
+          <span>Home postcode</span>
+          <input
+            id="home-postcode"
+            name="homePostcode"
+            type="text"
+            autocomplete="postal-code"
+            inputmode="text"
+            placeholder="e.g. SW1A 1AA"
+          />
+        </label>
+        <label class="field">
+          <span>Commute mode</span>
+          <select id="commute-mode" name="commuteMode">
+            <option value="car">Car</option>
+            <option value="bus">Bus</option>
+            <option value="rail">Rail</option>
+            <option value="walk">Walk</option>
+            <option value="cycle">Cycle</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Office days per week</span>
+          <select id="office-days" name="officeDays">
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+        </label>
+        <button class="primary" type="submit">Save settings</button>
+        <p id="status" class="status" role="status"></p>
+      </form>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -9,6 +9,10 @@
     "service_worker": "service_worker.js",
     "type": "module"
   },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "CarbonRank settings"
+  },
   "content_scripts": [
     {
       "matches": ["https://www.reed.co.uk/jobs*", "https://www.reed.co.uk/*/jobs*"],

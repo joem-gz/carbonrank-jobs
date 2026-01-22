@@ -8,6 +8,7 @@ const shared = {
   bundle: true,
   sourcemap: true,
   outdir: distDir,
+  outbase: "src",
   loader: {
     ".css": "text",
   },
@@ -30,7 +31,17 @@ async function build() {
     ...shared,
   });
 
+  await esbuild.build({
+    entryPoints: ["src/popup/popup.ts"],
+    format: "iife",
+    platform: "browser",
+    ...shared,
+  });
+
   await copyFile("src/manifest.json", "dist/manifest.json");
+  await mkdir(resolve(distDir, "popup"), { recursive: true });
+  await copyFile("src/popup/popup.html", "dist/popup/popup.html");
+  await copyFile("src/popup/popup.css", "dist/popup/popup.css");
 }
 
 build().catch((error) => {

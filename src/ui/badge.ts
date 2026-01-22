@@ -4,6 +4,9 @@ const STYLE_ID = "carbonrank-styles";
 export function ensureBadge(cardEl: HTMLElement, text: string): HTMLElement {
   const existing = cardEl.querySelector(`[${BADGE_ATTR}]`);
   if (existing instanceof HTMLElement) {
+    if (existing.textContent !== text) {
+      existing.textContent = text;
+    }
     return existing;
   }
 

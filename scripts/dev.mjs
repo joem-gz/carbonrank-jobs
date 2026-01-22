@@ -8,13 +8,17 @@ const shared = {
   bundle: true,
   sourcemap: true,
   outdir: distDir,
+  outbase: "src",
   loader: {
     ".css": "text",
   },
 };
 
-async function copyManifest() {
+async function copyStatic() {
   await copyFile("src/manifest.json", "dist/manifest.json");
+  await mkdir(resolve(distDir, "popup"), { recursive: true });
+  await copyFile("src/popup/popup.html", "dist/popup/popup.html");
+  await copyFile("src/popup/popup.css", "dist/popup/popup.css");
 }
 
 async function watch() {
@@ -34,9 +38,17 @@ async function watch() {
     ...shared,
   });
 
+  const popupContext = await esbuild.context({
+    entryPoints: ["src/popup/popup.ts"],
+    format: "iife",
+    platform: "browser",
+    ...shared,
+  });
+
   await contentContext.watch();
   await workerContext.watch();
-  await copyManifest();
+  await popupContext.watch();
+  await copyStatic();
 
   console.log("Watching for changes...");
 }
