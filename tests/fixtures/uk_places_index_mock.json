@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "source": "OS Open Names",
+    "buildDate": "2025-01-22",
+    "license": "OGL",
+    "attribution": "Contains OS Open Names data © Crown copyright and database rights"
+  },
+  "places": {
+    "london": [
+      {
+        "name": "London",
+        "lat": 51.5072,
+        "lon": -0.1276,
+        "local_type": "City",
+        "county_unitary": "Greater London",
+        "region": "London",
+        "country": "England"
+      }
+    ],
+    "newbury": [
+      {
+        "name": "Newbury",
+        "lat": 51.4017,
+        "lon": -1.3239,
+        "local_type": "Town",
+        "county_unitary": "West Berkshire",
+        "region": "South East",
+        "country": "England"
+      },
+      {
+        "name": "Newbury",
+        "lat": 53.099,
+        "lon": -2.377,
+        "local_type": "Village",
+        "county_unitary": "Cheshire",
+        "region": "North West",
+        "country": "England"
+      }
+    ],
+    "harrow": [
+      {
+        "name": "Harrow",
+        "lat": 51.579,
+        "lon": -0.337,
+        "local_type": "London Borough",
+        "county_unitary": "Greater London",
+        "region": "London",
+        "country": "England"
+      },
+      {
+        "name": "Harrow",
+        "lat": 52.1,
+        "lon": -1.0,
+        "local_type": "Village",
+        "county_unitary": "Warwickshire",
+        "region": "West Midlands",
+        "country": "England"
+      }
+    ]
+  }
+}
