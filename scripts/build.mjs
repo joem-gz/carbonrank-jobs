@@ -11,6 +11,7 @@ const shared = {
   outbase: "src",
   loader: {
     ".css": "text",
+    ".json": "json",
   },
 };
 

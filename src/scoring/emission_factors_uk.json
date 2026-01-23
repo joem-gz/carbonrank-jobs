@@ -1,0 +1,12 @@
+{
+  "notes": "Approximate UK Government GHG conversion factors for passenger travel. Update with latest published values and document source in README.",
+  "unit": "kgCO2e_per_km",
+  "year": 2025,
+  "modes": {
+    "car": 0.170,
+    "bus": 0.103,
+    "rail": 0.041,
+    "walk": 0.0,
+    "cycle": 0.0
+  }
+}

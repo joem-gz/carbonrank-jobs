@@ -1,0 +1,61 @@
+# CarbonRank Jobs (MVP)
+
+Chrome Extension that adds a CarbonRank badge to Reed job cards. It estimates
+commute-only annual CO2e using straight-line distance and UK emission factors.
+
+## What it does
+
+- Works on `https://www.reed.co.uk/jobs*` results pages.
+- Reads job location names (e.g. "Basingstoke, Hampshire").
+- Resolves the place to a centroid using OS Open Names (local index).
+- Resolves your home postcode via Postcodes.io.
+- Calculates annual commute CO2e for the selected commute mode and office days.
+
+Badge states:
+
+- `Set postcode` when no home postcode is stored.
+- `0 kgCO2e/yr` for "Work from home" or "Remote".
+- `No data` for overly broad locations (e.g. United Kingdom, UK, Nationwide).
+- `X kgCO2e/yr` when place resolution succeeds.
+
+## Build and load
+
+1) Install dependencies:
+
+```bash
+npm install
+```
+
+2) Build the extension:
+
+```bash
+npm run build
+```
+
+3) Load unpacked in Chrome:
+
+- Open `chrome://extensions`
+- Enable Developer mode
+- Click "Load unpacked"
+- Select the `dist` folder
+
+## Usage
+
+- Open the extension popup and set:
+  - Home postcode
+  - Commute mode
+  - Office days per week
+- Visit `https://www.reed.co.uk/jobs` and browse results.
+- Hover a badge to see the breakdown.
+
+## Privacy
+
+- Stored locally: home postcode, commute mode, office days per week (sync storage).
+- Cached locally: geocode lookups for home postcode (local storage).
+- Network calls: Postcodes.io (home postcode only).
+- Job locations are resolved locally via the OS Open Names index.
+
+## Notes and caveats
+
+- Uses straight-line distance (haversine), not routing.
+- Location resolution is approximate (place centroid, not a specific address).
