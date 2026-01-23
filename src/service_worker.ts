@@ -1,5 +1,5 @@
 import { ScoreRequestMessage, ScoreResponseMessage } from "./messages";
-import { scoreLocationOnly } from "./scoring/location_scoring";
+import { scoreLocation } from "./scoring/location_scoring";
 
 chrome.runtime.onInstalled.addListener(() => {
   console.debug("[CarbonRank] Service worker installed");
@@ -10,7 +10,7 @@ async function handleScoreRequest(message: ScoreRequestMessage): Promise<ScoreRe
   return {
     type: "score_response",
     requestId,
-    result: scoreLocationOnly(locationName, settings),
+    result: await scoreLocation(locationName, settings),
   };
 }
 

@@ -1,19 +1,33 @@
+import emissionFactors from "./emission_factors_uk.json";
+import { haversineDistanceKm } from "./haversine";
+import { GeocodeResult, ScoreBreakdown } from "./types";
 import { Settings } from "../storage/settings";
-import { extractPostcode } from "./postcode";
-import { ParsedJobCard, ScoreResult } from "./types";
 
-export function scoreJob(job: ParsedJobCard, settings: Settings): ScoreResult {
-  const jobPostcode = extractPostcode(job.locationText);
-  if (!jobPostcode) {
-    return { status: "unknown", reason: "Missing job postcode" };
-  }
+export const WORK_WEEKS_PER_YEAR = 46;
 
-  if (!settings.homePostcode.trim()) {
-    return { status: "unknown", reason: "Missing home postcode" };
-  }
+export function buildScore(
+  settings: Settings,
+  home: GeocodeResult,
+  jobLocation: GeocodeResult,
+): ScoreBreakdown {
+  const distanceKm = haversineDistanceKm(
+    { lat: home.latitude, lng: home.longitude },
+    { lat: jobLocation.latitude, lng: jobLocation.longitude },
+  );
 
-  return {
-    status: "ok",
-    jobPostcode,
+  const annualKm =
+    2 * distanceKm * settings.officeDaysPerWeek * WORK_WEEKS_PER_YEAR;
+
+  const emissionFactor = emissionFactors.modes[settings.commuteMode];
+  const annualKgCO2e = annualKm * emissionFactor;
+
+  const breakdown: ScoreBreakdown = {
+    distanceKm,
+    officeDaysPerWeek: settings.officeDaysPerWeek,
+    annualKm,
+    emissionFactorKgPerKm: emissionFactor,
+    annualKgCO2e,
   };
+
+  return breakdown;
 }

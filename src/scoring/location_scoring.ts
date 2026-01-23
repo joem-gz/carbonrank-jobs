@@ -1,6 +1,9 @@
 import emissionFactors from "./emission_factors_uk.json";
 import { classifyLocation } from "../geo/location_classifier";
+import { resolvePlaceFromLocationTokens } from "../geo/place_resolver";
+import { geocodePostcode } from "../geocoding/postcodes";
 import { Settings } from "../storage/settings";
+import { buildScore } from "./calculator";
 import { ScoreBreakdown, ScoreResult } from "./types";
 
 function buildWfhBreakdown(settings: Settings): ScoreBreakdown {
@@ -13,7 +16,10 @@ function buildWfhBreakdown(settings: Settings): ScoreBreakdown {
   };
 }
 
-export function scoreLocationOnly(locationName: string, settings: Settings): ScoreResult {
+export async function scoreLocation(
+  locationName: string,
+  settings: Settings,
+): Promise<ScoreResult> {
   if (!settings.homePostcode.trim()) {
     return { status: "set_postcode" };
   }
@@ -34,5 +40,30 @@ export function scoreLocationOnly(locationName: string, settings: Settings): Sco
     };
   }
 
-  return { status: "loading" };
+  const resolved = resolvePlaceFromLocationTokens(classification.tokens);
+  if (resolved.kind === "unresolved") {
+    return {
+      status: "no_data",
+      reason: "Cannot resolve place",
+    };
+  }
+
+  const home = await geocodePostcode(settings.homePostcode);
+  if (!home) {
+    return {
+      status: "error",
+      reason: "Home postcode lookup failed",
+    };
+  }
+
+  const breakdown = buildScore(settings, home, {
+    latitude: resolved.lat,
+    longitude: resolved.lon,
+  });
+
+  return {
+    status: "ok",
+    breakdown,
+    placeName: resolved.chosenName,
+  };
 }

@@ -37,6 +37,7 @@ export type ScoreResult =
   | {
       status: "ok";
       breakdown: ScoreBreakdown;
+      placeName: string;
     }
   | {
       status: "error";

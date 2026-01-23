@@ -14,8 +14,9 @@ function setBadgeState(badge: HTMLElement, text: string, tooltip?: string): void
   }
 }
 
-function formatBreakdown(breakdown: ScoreBreakdown): string {
+function formatBreakdown(breakdown: ScoreBreakdown, placeName: string): string {
   return [
+    `place: ${placeName}`,
     `distance_km: ${breakdown.distanceKm.toFixed(1)}`,
     `office_days_per_week: ${breakdown.officeDaysPerWeek}`,
     `annual_km: ${Math.round(breakdown.annualKm)}`,
@@ -54,7 +55,11 @@ function applyScoreResult(badge: HTMLElement, result: ScoreResult): void {
       return;
     case "ok": {
       const annualKg = Math.round(result.breakdown.annualKgCO2e);
-      setBadgeState(badge, `${annualKg} kgCO2e/yr`, formatBreakdown(result.breakdown));
+      setBadgeState(
+        badge,
+        `${annualKg} kgCO2e/yr`,
+        formatBreakdown(result.breakdown, result.placeName),
+      );
       return;
     }
     case "error":
