@@ -1,0 +1,72 @@
+import { readFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { test, expect, chromium } from "@playwright/test";
+
+const fixtureHtml = readFileSync(
+  resolve("tests/fixtures/jobposting_page.html"),
+  "utf-8",
+);
+
+test("shows page score UI for JobPosting JSON-LD", async () => {
+  test.setTimeout(60_000);
+  const extensionPath = resolve("dist");
+  const userDataDir = mkdtempSync(join(tmpdir(), "carbonrank-e2e-"));
+
+  const context = await chromium.launchPersistentContext(userDataDir, {
+    headless: false,
+    args: [
+      `--disable-extensions-except=${extensionPath}`,
+      `--load-extension=${extensionPath}`,
+    ],
+  });
+
+  await context.route("https://example.com/job*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: fixtureHtml,
+    });
+  });
+
+  await context.route("https://api.postcodes.io/postcodes/*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        status: 200,
+        result: { latitude: 51.501, longitude: -0.141 },
+      }),
+    });
+  });
+
+  const page = await context.newPage();
+  await page.goto("https://example.com/job?id=1", { waitUntil: "domcontentloaded" });
+
+  const worker =
+    context.serviceWorkers()[0] ??
+    (await context.waitForEvent("serviceworker", { timeout: 5000 }));
+
+  await worker.evaluate(() =>
+    chrome.storage.sync.set({
+      carbonrankSettings: {
+        homePostcode: "SW1A 1AA",
+        commuteMode: "car",
+        officeDaysPerWeek: 3,
+      },
+    }),
+  );
+
+  const pill = page.locator(".carbonrank-page-score__pill");
+  await expect(pill).toBeVisible();
+
+  await pill.click();
+
+  const panel = page.locator(".carbonrank-page-score__panel");
+  await expect(panel).toBeVisible();
+
+  const scoreValue = page.locator(".carbonrank-page-score__score-value");
+  await expect(scoreValue).toContainText("kgCO2e/yr");
+
+  await context.close();
+});

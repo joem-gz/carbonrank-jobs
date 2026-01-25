@@ -1,0 +1,99 @@
+.carbonrank-page-score {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+}
+
+.carbonrank-page-score,
+.carbonrank-page-score * {
+  box-sizing: border-box;
+}
+
+.carbonrank-page-score__pill {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #0b6b5b;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+}
+
+.carbonrank-page-score__panel {
+  margin-top: 10px;
+  width: 320px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.carbonrank-page-score__panel[hidden] {
+  display: none;
+}
+
+.carbonrank-page-score__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #f1f5f9;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.carbonrank-page-score__close {
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  color: #475569;
+}
+
+.carbonrank-page-score__body {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.carbonrank-page-score__job-title {
+  font-weight: 600;
+  font-size: 14px;
+  margin: 0;
+}
+
+.carbonrank-page-score__job-meta {
+  font-size: 12px;
+  color: #475569;
+  margin: 2px 0 0 0;
+}
+
+.carbonrank-page-score__score-value {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #0b6b5b;
+}
+
+.carbonrank-page-score__score-reason {
+  font-size: 12px;
+  color: #475569;
+  margin: 4px 0 0 0;
+}
+
+.carbonrank-page-score__breakdown {
+  margin: 8px 0 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #334155;
+  white-space: pre-line;
+}
