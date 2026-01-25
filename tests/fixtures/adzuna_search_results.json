@@ -1,0 +1,39 @@
+{
+  "results": [
+    {
+      "id": "london-1",
+      "title": "London Product Designer",
+      "company": "City Co",
+      "redirect_url": "https://example.com/london",
+      "created": "2024-01-03T00:00:00.000Z",
+      "description_snippet": "London role",
+      "location_name": "London",
+      "lat": 51.5072,
+      "lon": -0.1276
+    },
+    {
+      "id": "uk-1",
+      "title": "UK Product Designer",
+      "company": "UK Co",
+      "redirect_url": "https://example.com/uk",
+      "created": "2024-01-04T00:00:00.000Z",
+      "description_snippet": "UK role",
+      "location_name": "United Kingdom",
+      "lat": null,
+      "lon": null
+    },
+    {
+      "id": "remote-1",
+      "title": "Remote Product Designer",
+      "company": "Remote Co",
+      "redirect_url": "https://example.com/remote",
+      "created": "2024-01-02T00:00:00.000Z",
+      "description_snippet": "Remote role",
+      "location_name": "Remote",
+      "lat": null,
+      "lon": null
+    }
+  ],
+  "count": 3,
+  "page": 1
+}

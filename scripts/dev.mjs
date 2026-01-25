@@ -20,6 +20,15 @@ async function copyStatic() {
   await mkdir(resolve(distDir, "popup"), { recursive: true });
   await copyFile("src/popup/popup.html", "dist/popup/popup.html");
   await copyFile("src/popup/popup.css", "dist/popup/popup.css");
+  await mkdir(resolve(distDir, "pages", "search"), { recursive: true });
+  await copyFile(
+    "src/pages/search/search.html",
+    "dist/pages/search/search.html",
+  );
+  await copyFile(
+    "src/pages/search/search.css",
+    "dist/pages/search/search.css",
+  );
 }
 
 async function watch() {
@@ -46,9 +55,17 @@ async function watch() {
     ...shared,
   });
 
+  const searchContext = await esbuild.context({
+    entryPoints: ["src/pages/search/search.ts"],
+    format: "iife",
+    platform: "browser",
+    ...shared,
+  });
+
   await contentContext.watch();
   await workerContext.watch();
   await popupContext.watch();
+  await searchContext.watch();
   await copyStatic();
 
   console.log("Watching for changes...");

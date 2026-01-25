@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CarbonRank Search</title>
+    <link rel="stylesheet" href="search.css" />
+  </head>
+  <body>
+    <main class="search">
+      <header class="header">
+        <h1>CarbonRank Search</h1>
+        <p class="subtitle">
+          Adzuna-powered search with commute-only CO2e estimates.
+        </p>
+        <p class="settings-hint">
+          Home postcode: <strong id="home-postcode-value">Not set</strong>
+        </p>
+        <p class="settings-hint">Update this in the extension popup.</p>
+      </header>
+
+      <form id="search-form" class="card" novalidate>
+        <div class="field">
+          <label for="search-query">Keywords</label>
+          <input
+            id="search-query"
+            name="q"
+            type="text"
+            placeholder="e.g. Product designer"
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="search-where">Location</label>
+          <input
+            id="search-where"
+            name="where"
+            type="text"
+            placeholder="e.g. London"
+            autocomplete="off"
+          />
+        </div>
+        <div class="field">
+          <label for="search-radius">Radius (km)</label>
+          <input
+            id="search-radius"
+            name="radius"
+            type="number"
+            min="1"
+            max="200"
+            step="1"
+            placeholder="25"
+          />
+        </div>
+        <div class="field">
+          <label for="search-page">Page</label>
+          <input
+            id="search-page"
+            name="page"
+            type="number"
+            min="1"
+            step="1"
+            value="1"
+          />
+        </div>
+        <label class="toggle">
+          <input id="remote-only" type="checkbox" />
+          Remote only (0 kgCO2e)
+        </label>
+        <label class="toggle">
+          <input id="sort-co2" type="checkbox" />
+          Sort by lowest CO2
+        </label>
+        <div class="actions">
+          <button class="primary" type="submit">Search</button>
+          <button class="secondary" type="button" id="save-search">
+            Save search
+          </button>
+        </div>
+        <p id="status" class="status" role="status"></p>
+      </form>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>Results</h2>
+          <span id="result-count" class="meta"></span>
+        </div>
+        <ul id="results" class="results"></ul>
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>Saved searches</h2>
+        </div>
+        <ul id="saved-searches" class="saved-list"></ul>
+      </section>
+
+      <section class="card">
+        <div class="section-header">
+          <h2>Saved jobs</h2>
+        </div>
+        <ul id="saved-jobs" class="saved-list"></ul>
+      </section>
+    </main>
+    <script src="search.js"></script>
+  </body>
+</html>
