@@ -59,3 +59,8 @@ npm run build
 
 - Uses straight-line distance (haversine), not routing.
 - Location resolution is approximate (place centroid, not a specific address).
+
+## Plans
+
+- current plan.md for development agents is at the root of this repo.
+- previous archive of plans is in docs/plans
