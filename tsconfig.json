@@ -10,6 +10,6 @@
     "types": ["chrome", "node"],
     "skipLibCheck": true
   },
-  "include": ["src", "tests", "scripts", "server"],
+  "include": ["src", "tests", "scripts", "server", "widget"],
   "exclude": ["dist", "node_modules"]
 }

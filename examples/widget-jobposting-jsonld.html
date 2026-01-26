@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CarbonRank Widget Example</title>
+    <link rel="stylesheet" href="../dist/widget.css" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        padding: 32px;
+        background: #f7f9f8;
+      }
+
+      .example-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CarbonRank Widget (Server Render)</h1>
+    <p>Example output from a server-rendered data payload.</p>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        "title": "Sustainability Analyst",
+        "hiringOrganization": { "name": "Greenline" },
+        "jobLocation": {
+          "@type": "Place",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "London",
+            "addressCountry": "UK"
+          }
+        }
+      }
+    </script>
+
+    <div class="example-grid">
+      <span
+        data-carbonrank='{"status":"ok","score":123,"breakdown":{"annualKgCO2e":123}}'
+      ></span>
+      <span data-carbonrank='{"status":"wfh","reason":"Remote role"}'></span>
+      <span
+        data-carbonrank='{"status":"no_data","reason":"Location missing"}'
+      ></span>
+    </div>
+
+    <script src="../dist/widget.js"></script>
+    <script>
+      window.CarbonRankWidget?.init?.();
+    </script>
+  </body>
+</html>

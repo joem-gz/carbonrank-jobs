@@ -1,0 +1,122 @@
+.carbonrank-widget {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d3e2de;
+  background: #f5fbf9;
+  color: #0b3f35;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  max-width: 240px;
+}
+
+.carbonrank-widget__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #0b6b5b;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.carbonrank-widget__reason {
+  margin: 0;
+  color: #37534c;
+  font-size: 12px;
+}
+
+.carbonrank-widget__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.carbonrank-widget__how {
+  border: 1px solid #0b6b5b;
+  border-radius: 999px;
+  background: transparent;
+  color: #0b6b5b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.carbonrank-widget__how:focus-visible {
+  outline: 2px solid #0b6b5b;
+  outline-offset: 2px;
+}
+
+.carbonrank-widget__attribution {
+  font-size: 10px;
+  color: #5b6f69;
+}
+
+.carbonrank-widget__modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483647;
+}
+
+.carbonrank-widget__modal[hidden] {
+  display: none;
+}
+
+.carbonrank-widget__modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 20, 18, 0.45);
+}
+
+.carbonrank-widget__modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100% - 32px));
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 18px 20px;
+  box-shadow: 0 16px 40px rgba(5, 30, 24, 0.25);
+  color: #0b3f35;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.carbonrank-widget__modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.carbonrank-widget__modal-title {
+  margin: 0;
+  font-size: 16px;
+}
+
+.carbonrank-widget__modal-close {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: #0b3f35;
+}
+
+.carbonrank-widget__modal-body p {
+  margin: 0 0 10px 0;
+  font-size: 13px;
+  color: #37534c;
+}
+
+.carbonrank-widget__modal-body p:last-child {
+  margin-bottom: 0;
+}
