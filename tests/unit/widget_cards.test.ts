@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { init } from "../../widget/src/index";
 
 function loadFixture(path: string): Document {
-  const url = new URL(path, import.meta.url);
-  const html = readFileSync(url, "utf-8");
+  const html = readFileSync(resolve("tests", "fixtures", path), "utf-8");
   return new DOMParser().parseFromString(html, "text/html");
 }
 
@@ -24,9 +24,9 @@ afterEach(() => {
 
 describe("widget job cards", () => {
   it("renders card widgets using configured selectors", async () => {
-    const doc = loadFixture("../fixtures/widget_cards_initial.html");
+    const doc = loadFixture("widget_cards_initial.html");
     const mutationHtml = readFileSync(
-      new URL("../fixtures/widget_cards_mutation.html", import.meta.url),
+      resolve("tests", "fixtures", "widget_cards_mutation.html"),
       "utf-8",
     );
     doc.body?.insertAdjacentHTML("beforeend", mutationHtml);
@@ -48,7 +48,7 @@ describe("widget job cards", () => {
   });
 
   it("adds widgets for new cards without duplicating", async () => {
-    const doc = loadFixture("../fixtures/widget_cards_initial.html");
+    const doc = loadFixture("widget_cards_initial.html");
     const fetchMock = vi.fn(async () =>
       ({
         ok: true,
@@ -61,7 +61,7 @@ describe("widget job cards", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const mutationHtml = readFileSync(
-      new URL("../fixtures/widget_cards_mutation.html", import.meta.url),
+      resolve("tests", "fixtures", "widget_cards_mutation.html"),
       "utf-8",
     );
     doc.body?.insertAdjacentHTML("beforeend", mutationHtml);
