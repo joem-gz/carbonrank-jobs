@@ -1,5 +1,4 @@
-import { readFileSync, mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test, expect, chromium } from "@playwright/test";
 
@@ -11,13 +10,18 @@ const fixtureHtml = readFileSync(
 test("shows page score UI for JobPosting JSON-LD", async () => {
   test.setTimeout(60_000);
   const extensionPath = resolve("dist");
-  const userDataDir = mkdtempSync(join(tmpdir(), "carbonrank-e2e-"));
+  const userDataDir = mkdtempSync(join(process.cwd(), ".pw-user-data-"));
+  const crashpadDir = join(process.cwd(), ".pw-crashpad");
+  mkdirSync(crashpadDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
+      `--crash-dumps-dir=${crashpadDir}`,
+      "--disable-crashpad",
+      "--disable-crash-reporter",
     ],
   });
 
