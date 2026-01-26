@@ -1,140 +1,24 @@
-# plan.md — CarbonRank (Next Build) — Epics 1–2
+# plan.md — CarbonRank (Next Build) — Epics 3–4
 
-Previous MVP Plan: docs/plans/2026-01-mvp.md
+Current Epics:
+
+docs/plans/2026-01-epic4-whitelabel-widget.md
+docs/plans/2026-01-epic3-employer-impact-signals.md
+
+
+Previous Plans:
+MVP: docs/plans/2026-01-mvp.md
+Epics 1-2: docs/plans/2026-01-epics-1-2.md
+
 
 Assumptions:
 - Existing repo contains working MVP extension (MV3, TS, esbuild, Vitest, Playwright) with Reed card badges and place-name centroid scoring.
-- Service worker lifecycle is short (Chrome may terminate after ~30s idle) so avoid heavy runtime initialisation. https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle :contentReference[oaicite:10]{index=10}
-- No remotely hosted code in MV3; all runtime code must be bundled. https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code :contentReference[oaicite:11]{index=11}
-- Playwright extension tests require Chromium persistent context. https://playwright.dev/docs/chrome-extensions :contentReference[oaicite:12]{index=12}
+- Service worker lifecycle is short (Chrome may terminate after ~30s idle) so avoid heavy runtime initialisation. https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle
+- No remotely hosted code in MV3; all runtime code must be bundled. https://developer.chrome.com/docs/extensions/develop/migrate/remote-hosted-code
+- Playwright extension tests require Chromium persistent context. https://playwright.dev/docs/chrome-extensions
 
 Repo policy (for all agents):
 - Work on feature branches only.
 - At each checkpoint: run lint + unit tests + build (+ e2e if touched), then STOP for human review before any commit.
 - Never add secrets to the repo. Add `.env.example` only.
 
----
-
-## Epic 1 — Any-site job page scoring via JobPosting JSON-LD (Weeks 1–3)
-
-### Goal
-Enable scoring on *any* job detail page that exposes Schema.org JobPosting JSON-LD.
-References:
-- JobPosting schema: https://schema.org/JobPosting :contentReference[oaicite:13]{index=13}
-- Google job posting structured data guidance: https://developers.google.com/search/docs/appearance/structured-data/job-posting :contentReference[oaicite:14]{index=14}
-
-### Agent 1 tasks (Implementation)
-1) Create `src/extractors/jobposting_jsonld.ts`
-   - Parse all `script[type="application/ld+json"]` blocks.
-   - Support:
-     - single object, array of objects
-     - nested graph (`@graph`)
-   - Extract fields into a normalised `JobPostingExtract`:
-     - title
-     - hiringOrganization.name
-     - jobLocation / addressLocality / addressRegion / addressCountry
-     - jobLocationType and/or applicantLocationRequirements (to infer remote/WFH)
-2) Create `src/features/page_score/`
-   - Content-script detects presence of JobPosting JSON-LD on the current page.
-   - Provide a UI entry point:
-     - Option A: small floating pill "CarbonRank" opens panel
-     - Option B: extend extension popup to show “Score this page” when JobPosting found
-   - Reuse existing scoring engine:
-     - If remote/WFH => commute = 0
-     - Else if place tokens resolvable => score
-     - Else => "No data" with reason
-3) Add safe domain-agnostic CSS (namespaced) and ensure idempotency.
-4) Add telemetry hooks as NOOPs (interfaces only), do not add analytics yet.
-
-### Agent 1 tests
-Unit (Vitest):
-- JSON-LD parsing cases:
-  - minimal JobPosting
-  - JobPosting in @graph
-  - arrays
-  - missing fields -> graceful defaults
-- Remote detection rules:
-  - jobLocationType = "TELECOMMUTE" or applicantLocationRequirements indicates remote => WFH state
-Integration (jsdom):
-- Inject HTML fixture containing JSON-LD and ensure content script adds exactly one entry UI.
-
-E2E (Playwright):
-- Load unpacked extension in Chromium persistent context. :contentReference[oaicite:15]{index=15}
-- Open local fixture page with JobPosting JSON-LD; assert UI appears and can open breakdown.
-
-### Epic 1 checkpoints (human review gates)
-CP1.1: JSON-LD parser + unit tests green.
-CP1.2: Page UI appears on fixture pages, idempotent.
-CP1.3: E2E passes.
-
----
-
-## Epic 2 — CarbonRank Search (Adzuna feed + backend proxy) (Weeks 3–6)
-
-### Goal
-Add an in-extension search UI powered by Adzuna, with keys stored server-side.
-References:
-- Adzuna Search endpoint docs: https://developer.adzuna.com/docs/search :contentReference[oaicite:16]{index=16}
-
-### Required prep (human)
-- Obtain Adzuna `APP_ID` and `APP_KEY` (developer portal).
-- Provide them locally via `.env` for the proxy service:
-  - `ADZUNA_APP_ID=...`
-  - `ADZUNA_APP_KEY=...`
-Never commit `.env`.
-
-### Agent 2 tasks (Proxy service)
-1) Create `server/` (Node + TypeScript)
-   - Minimal framework (Express/Fastify) with one endpoint:
-     - `GET /api/jobs/search?q=&where=&page=&radius_km=&remote_only=`
-   - Server calls Adzuna search endpoint with app_id/app_key.
-   - Normalise to internal schema:
-     - id, title, company, redirect_url, created, description_snippet
-     - location_name
-     - lat, lon (when provided)
-2) Add caching + rate limiting:
-   - In-memory LRU by query (TTL 5–15 minutes).
-   - Basic per-IP rate limit for dev.
-3) Add `.env.example` and server README.
-
-### Agent 3 tasks (Extension search UI)
-1) Create `src/pages/search/` as an extension page
-   - Search form + results list
-   - Sort toggle: lowest CO2 first
-   - Remote-only toggle => WFH=0
-2) Scoring path for Adzuna results:
-   - If lat/lon present: compute distance from home postcode lat/lon (Postcodes.io) then annual CO2.
-   - If no lat/lon: fall back to place resolver (optional), else "No data".
-3) Add “Save search” + “Saved jobs” local-only (no auth) as basic retention hooks.
-
-### Agent 2/3 tests
-Proxy:
-- Unit: request builder, normaliser
-- Integration: mock Adzuna HTTP response; assert output schema
-Extension:
-- Unit: sorting, filtering, CO2 calculator on lat/lon
-- Integration: mock proxy fetch; assert UI renders results and sorts by CO2
-
-E2E:
-- Playwright loads extension.
-- Intercept proxy endpoint and return fixture jobs:
-  - one remote/WFH
-  - one London
-  - one Newbury
-- Assert:
-  - badges show 0 / numeric / No data as expected
-  - sorting works
-(Extensions require persistent context). :contentReference[oaicite:17]{index=17}
-
-### Epic 2 checkpoints (human review gates)
-CP2.1: Proxy runs locally with mocked Adzuna response; tests pass.
-CP2.2: Extension search page works with mocked proxy; tests pass.
-CP2.3: Full E2E passes with interceptions.
-
----
-
-## Cross-cutting “done” conditions for Epics 1–2
-- No new secrets or remote code.
-- Service worker remains lightweight; no giant datasets loaded in SW startup. :contentReference[oaicite:18]{index=18}
-- All new UI strings in UK English, clear caveats.
-- Lint + unit + build + e2e green in CI.
