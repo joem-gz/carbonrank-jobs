@@ -2,26 +2,34 @@
 
 ## Summary
 - Added Epic 4 CP4.1 widget renderer with modal shell + attribution.
-- Added widget build script and server-rendered example page.
-- Added unit and Playwright coverage for widget render states.
+- Added JSON-LD detail scanning with remote handling + geo extraction.
+- Added job card scanning with selectors + MutationObserver support.
+- Added examples and unit/e2e coverage for SSR, JSON-LD, and cards.
 
 ## Key files
+- src/extractors/jobposting_jsonld.ts
 - widget/src/index.ts
 - widget/src/styles.css
 - scripts/build_widget.mjs
 - examples/widget-jobposting-jsonld.html
+- examples/widget-jobcards.html
+- examples/widget-ssr.html
 - tests/unit/widget_render.test.ts
+- tests/unit/widget_jsonld.test.ts
+- tests/unit/widget_cards.test.ts
 - tests/e2e/widget_ssr.spec.ts
+- tests/e2e/widget_jsonld.spec.ts
+- tests/e2e/widget_jobcards.spec.ts
 
 ## How to verify
 Commands + expected result
-- `npm run build` (extension bundle for e2e suite)
-- `npm run build:widget` (generates `dist/widget.js` + `dist/widget.css`)
 - `npm test` (unit tests)
-- `npm run test:e2e` (Playwright checks widget example; requires Playwright browsers)
+- `npm run build` (extension bundle for e2e suite)
+- `npm run test:e2e` (Playwright widget + extension specs; requires Playwright browsers)
 
 ## Behavior changes
-- New `CarbonRankWidget.init()` renders server-provided `data-carbonrank` payloads.
+- `CarbonRankWidget.init()` now scans JobPosting JSON-LD and job cards when configured.
+- JSON-LD parsing captures geo coordinates and uses place-name fallback.
 
 ## Risks / edge cases
 - Example page expects widget assets in `dist/`.
@@ -29,5 +37,5 @@ Commands + expected result
 - Playwright needed escalated permissions to launch Chromium in this environment.
 
 ## Follow-ups
-- CP4.2 JSON-LD detail parsing.
-- CP4.3 job card integration.
+- CP4.4 API endpoint, auth, and caching.
+- CP4.5 release packaging.

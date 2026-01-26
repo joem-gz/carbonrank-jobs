@@ -33,9 +33,9 @@ Won’t change:
 - Document validation + handoff
 
 ## Validation (commands)
-- `npm test`
-- `npm run build`
-- `npm run test:e2e`
+- `npm test` (pass)
+- `npm run build` (pass)
+- `npm run test:e2e` (pass; required escalated permissions)
 
 ## Risks / edge cases
 - Widget placement on detail pages must remain predictable
