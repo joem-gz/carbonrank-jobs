@@ -10,11 +10,12 @@ Local proxy for Adzuna search to keep API keys server-side.
 cp .env.example .env
 ```
 
-2) Add your Adzuna credentials:
+2) Add your Adzuna and Companies House credentials:
 
 ```
 ADZUNA_APP_ID=your_app_id
 ADZUNA_APP_KEY=your_app_key
+COMPANIES_HOUSE_API_KEY=your_company_house_key
 ```
 
 3) Build the proxy:
@@ -31,7 +32,7 @@ npm run server:start
 
 The proxy listens on `http://localhost:8787` by default.
 
-## Endpoint
+## Endpoints
 
 `GET /api/jobs/search`
 
@@ -62,6 +63,49 @@ Responses are normalised to:
   ],
   count,
   page,
+  cached
+}
+```
+
+`GET /api/employer/resolve`
+
+Query parameters:
+
+- `name` — employer name (required)
+- `hint_location` — optional location hint for ranking
+
+Response:
+
+```
+{
+  candidates: [
+    {
+      company_number,
+      title,
+      status,
+      address_snippet,
+      sic_codes,
+      score,
+      reasons
+    }
+  ],
+  cached
+}
+```
+
+`GET /api/employer/signals`
+
+Query parameters:
+
+- `company_number` — Companies House number (required)
+
+Response:
+
+```
+{
+  company_number,
+  sic_codes,
+  sources,
   cached
 }
 ```

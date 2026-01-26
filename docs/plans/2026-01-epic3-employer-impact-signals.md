@@ -88,7 +88,7 @@ Add an employer “Impact Signals” panel that complements commute CO2 with:
 - Add import script + generated `ons_intensity_map.json`
 - `/api/employer/signals` includes sector intensity band + value
 - Tests: mapping edge cases (missing SIC, multiple SICs, fallback)
-- STOP: report with 10 manual spot-checks
+- Report with 10 manual spot-checks, proceed to CP3.3
 
 ### CP3.3 — Extension UI: employer panel (confidence + override)
 - Add UI section showing:
