@@ -54,6 +54,18 @@ select {
   cursor: pointer;
 }
 
+.secondary {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid #b7c6bf;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .status {
   min-height: 16px;
   margin: 8px 0 0;

@@ -1,11 +1,13 @@
 node_modules
 /dist
+/server/dist
 /data
 .DS_Store
 .vscode
 coverage
 test-results
 playwright-report
+.env
 .pw-user-data-*
 .pw-tmp
 .pw-home

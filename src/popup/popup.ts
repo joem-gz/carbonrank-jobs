@@ -11,8 +11,16 @@ const postcodeInput = document.querySelector<HTMLInputElement>("#home-postcode")
 const commuteSelect = document.querySelector<HTMLSelectElement>("#commute-mode");
 const officeSelect = document.querySelector<HTMLSelectElement>("#office-days");
 const statusEl = document.querySelector<HTMLParagraphElement>("#status");
+const openSearchButton = document.querySelector<HTMLButtonElement>("#open-search");
 
-if (!form || !postcodeInput || !commuteSelect || !officeSelect || !statusEl) {
+if (
+  !form ||
+  !postcodeInput ||
+  !commuteSelect ||
+  !officeSelect ||
+  !statusEl ||
+  !openSearchButton
+) {
   throw new Error("Popup DOM missing required elements");
 }
 
@@ -50,6 +58,11 @@ form.addEventListener("submit", async (event) => {
 
   postcodeInput.value = normalised;
   setStatus("Settings saved.");
+});
+
+openSearchButton.addEventListener("click", () => {
+  const url = chrome.runtime.getURL("pages/search/search.html");
+  chrome.tabs.create({ url });
 });
 
 void loadSettings().catch((error) => {

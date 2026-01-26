@@ -39,10 +39,26 @@ async function build() {
     ...shared,
   });
 
+  await esbuild.build({
+    entryPoints: ["src/pages/search/search.ts"],
+    format: "iife",
+    platform: "browser",
+    ...shared,
+  });
+
   await copyFile("src/manifest.json", "dist/manifest.json");
   await mkdir(resolve(distDir, "popup"), { recursive: true });
   await copyFile("src/popup/popup.html", "dist/popup/popup.html");
   await copyFile("src/popup/popup.css", "dist/popup/popup.css");
+  await mkdir(resolve(distDir, "pages", "search"), { recursive: true });
+  await copyFile(
+    "src/pages/search/search.html",
+    "dist/pages/search/search.html",
+  );
+  await copyFile(
+    "src/pages/search/search.css",
+    "dist/pages/search/search.css",
+  );
 }
 
 build().catch((error) => {
