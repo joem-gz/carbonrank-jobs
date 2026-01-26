@@ -97,3 +97,78 @@
   color: #334155;
   white-space: pre-line;
 }
+
+.carbonrank-page-score__employer {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #0f172a;
+}
+
+.carbonrank-page-score__section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.carbonrank-page-score__employer-status,
+.carbonrank-page-score__employer-sic,
+.carbonrank-page-score__employer-intensity,
+.carbonrank-page-score__employer-note {
+  margin: 0;
+  color: #475569;
+}
+
+.carbonrank-page-score__employer-match {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.carbonrank-page-score__label {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.carbonrank-page-score__employer-name {
+  font-weight: 600;
+}
+
+.carbonrank-page-score__employer-confidence {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.carbonrank-page-score__employer-change {
+  border: 1px solid #cbd5f5;
+  background: #ffffff;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #0b6b5b;
+}
+
+.carbonrank-page-score__employer-change:disabled {
+  cursor: not-allowed;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+}
+
+.carbonrank-page-score__employer-select {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+}
+
+.carbonrank-page-score__employer-note {
+  font-size: 11px;
+  color: #64748b;
+}

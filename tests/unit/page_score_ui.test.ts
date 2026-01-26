@@ -1,12 +1,45 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { initPageScore } from "../../src/features/page_score";
+import { EmployerSignalsResult } from "../../src/employer/types";
 import { Settings } from "../../src/storage/settings";
 
 const settings: Settings = {
   homePostcode: "SW1A 1AA",
   commuteMode: "car",
   officeDaysPerWeek: 3,
+};
+
+const employerResult: EmployerSignalsResult = {
+  status: "available",
+  candidates: [
+    {
+      company_number: "123",
+      title: "Acme Ltd",
+      status: "active",
+      address_snippet: "London",
+      sic_codes: ["62020"],
+      score: 0.92,
+      reasons: ["exact_normalized_match"],
+    },
+  ],
+  selectedCandidate: {
+    company_number: "123",
+    title: "Acme Ltd",
+    status: "active",
+    address_snippet: "London",
+    sic_codes: ["62020"],
+    score: 0.92,
+    reasons: ["exact_normalized_match"],
+  },
+  signals: {
+    company_number: "123",
+    sic_codes: ["62020"],
+    sector_intensity_band: "low",
+    sector_intensity_value: 0.42,
+    sources: ["companies_house", "ons"],
+    cached: false,
+  },
 };
 
 function loadFixture(path: string): Document {
@@ -22,16 +55,25 @@ describe("page score UI", () => {
       status: "no_data",
       reason: "Missing location",
     });
+    const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
 
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
+      fetchEmployerSignals,
+      getEmployerOverride: async () => null,
+      setEmployerOverride: async () => {},
+      clearEmployerOverride: async () => {},
     });
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
+      fetchEmployerSignals,
+      getEmployerOverride: async () => null,
+      setEmployerOverride: async () => {},
+      clearEmployerOverride: async () => {},
     });
 
     expect(doc.querySelectorAll("#carbonrank-page-score-root")).toHaveLength(1);
@@ -44,11 +86,16 @@ describe("page score UI", () => {
       status: "no_data",
       reason: "Missing location",
     });
+    const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
 
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
+      fetchEmployerSignals,
+      getEmployerOverride: async () => null,
+      setEmployerOverride: async () => {},
+      clearEmployerOverride: async () => {},
     });
 
     expect(doc.querySelectorAll(".carbonrank-page-score__pill")).toHaveLength(0);
@@ -62,5 +109,29 @@ describe("page score UI", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(doc.querySelectorAll(".carbonrank-page-score__pill")).toHaveLength(1);
+  });
+
+  it("renders employer signals summary", async () => {
+    const doc = loadFixture("../fixtures/jobposting_page.html");
+    const scoreLocation = vi.fn().mockResolvedValue({
+      status: "no_data",
+      reason: "Missing location",
+    });
+    const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
+
+    await initPageScore({
+      doc,
+      getSettings: async () => settings,
+      scoreLocation,
+      fetchEmployerSignals,
+      getEmployerOverride: async () => null,
+      setEmployerOverride: async () => {},
+      clearEmployerOverride: async () => {},
+    });
+
+    const status = doc.querySelector(".carbonrank-page-score__employer-status");
+    expect(status?.textContent).toContain("Employer signals: available");
+    const sicCodes = doc.querySelector(".carbonrank-page-score__employer-sic");
+    expect(sicCodes?.textContent).toContain("62020");
   });
 });

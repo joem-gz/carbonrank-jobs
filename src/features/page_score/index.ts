@@ -10,6 +10,18 @@ import { ScoreBreakdown, ScoreResult } from "../../scoring/types";
 import { getSettings, Settings } from "../../storage/settings";
 import { noopTelemetry, Telemetry } from "../../telemetry";
 import { ensureStyles } from "../../ui/badge";
+import { createEmployerSignalsPanel, EmployerSignalsElements } from "../../ui/employer_signals";
+import {
+  formatEmployerStatusLabel,
+  resolveEmployerSignals,
+} from "../../employer/api";
+import { EmployerCandidate, EmployerSignalsResult } from "../../employer/types";
+import {
+  clearEmployerOverride,
+  EmployerOverride as StoredEmployerOverride,
+  getEmployerOverride,
+  setEmployerOverride,
+} from "../../storage/employer_overrides";
 import pageScoreStyles from "./page_score.css";
 
 const ROOT_ID = "carbonrank-page-score-root";
@@ -26,6 +38,7 @@ type PageScoreElements = {
   scoreValue: HTMLElement;
   scoreReason: HTMLElement;
   breakdown: HTMLElement;
+  employer: EmployerSignalsElements;
 };
 
 export type PageScoreDependencies = {
@@ -33,6 +46,14 @@ export type PageScoreDependencies = {
   getSettings?: () => Promise<Settings>;
   scoreLocation?: (locationName: string, settings: Settings) => Promise<ScoreResult>;
   telemetry?: Telemetry;
+  fetchEmployerSignals?: (
+    name: string,
+    hintLocation: string,
+    override?: StoredEmployerOverride | null,
+  ) => Promise<EmployerSignalsResult>;
+  getEmployerOverride?: (name: string) => Promise<StoredEmployerOverride | null>;
+  setEmployerOverride?: (name: string, override: StoredEmployerOverride) => Promise<void>;
+  clearEmployerOverride?: (name: string) => Promise<void>;
 };
 
 type JobPostingContext = {
@@ -58,6 +79,9 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
 function ensurePageScoreElements(doc: Document): PageScoreElements {
   const existing = doc.getElementById(ROOT_ID);
   if (existing) {
+    const employerRoot = existing.querySelector(
+      ".carbonrank-page-score__employer",
+    ) as HTMLDivElement;
     return {
       root: existing,
       pill: existing.querySelector(".carbonrank-page-score__pill") as HTMLButtonElement,
@@ -77,6 +101,33 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
       breakdown: existing.querySelector(
         ".carbonrank-page-score__breakdown",
       ) as HTMLElement,
+      employer: {
+        root: employerRoot,
+        status: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-status",
+        ) as HTMLParagraphElement,
+        matchName: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-name",
+        ) as HTMLSpanElement,
+        matchConfidence: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-confidence",
+        ) as HTMLSpanElement,
+        changeButton: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-change",
+        ) as HTMLButtonElement,
+        select: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-select",
+        ) as HTMLSelectElement,
+        sicCodes: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-sic",
+        ) as HTMLParagraphElement,
+        intensity: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-intensity",
+        ) as HTMLParagraphElement,
+        note: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-note",
+        ) as HTMLParagraphElement,
+      },
     };
   }
 
@@ -106,8 +157,9 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
   const scoreValue = createElement(doc, "p", "carbonrank-page-score__score-value");
   const scoreReason = createElement(doc, "p", "carbonrank-page-score__score-reason");
   const breakdown = createElement(doc, "div", "carbonrank-page-score__breakdown");
+  const employer = createEmployerSignalsPanel(doc);
 
-  body.append(title, company, location, scoreValue, scoreReason, breakdown);
+  body.append(title, company, location, scoreValue, scoreReason, breakdown, employer.root);
   panel.append(header, body);
   root.append(pill, panel);
 
@@ -125,6 +177,7 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
     scoreValue,
     scoreReason,
     breakdown,
+    employer,
   };
 }
 
@@ -140,6 +193,121 @@ function formatBreakdown(breakdown: ScoreBreakdown, placeName?: string): string 
   ].filter(Boolean) as string[];
 
   return rows.join("\n");
+}
+
+function formatEmployerStatusText(result: EmployerSignalsResult): string {
+  return `Employer signals: ${formatEmployerStatusLabel(result.status)}`;
+}
+
+function formatEmployerConfidence(result: EmployerSignalsResult): string {
+  if (result.overrideApplied) {
+    return "Confidence: user-selected";
+  }
+  switch (result.status) {
+    case "available":
+      return "Confidence: high";
+    case "low_confidence":
+      return "Confidence: low";
+    case "no_data":
+      return "Confidence: unavailable";
+    case "error":
+      return "Confidence: unavailable";
+  }
+}
+
+function formatBandLabel(band: string): string {
+  if (!band || band === "unknown") {
+    return "Unknown";
+  }
+  return band.charAt(0).toUpperCase() + band.slice(1);
+}
+
+function formatSicCodes(codes: string[]): string {
+  return codes.length > 0 ? codes.join(", ") : "Not listed";
+}
+
+function populateEmployerOptions(
+  select: HTMLSelectElement,
+  candidates: EmployerCandidate[],
+  overrideCompanyNumber?: string,
+): void {
+  select.innerHTML = "";
+  const autoOption = new Option("Auto (top match)", "");
+  select.append(autoOption);
+  for (const candidate of candidates) {
+    const label = candidate.address_snippet
+      ? `${candidate.title} • ${candidate.address_snippet}`
+      : candidate.title;
+    const option = new Option(label, candidate.company_number);
+    select.append(option);
+  }
+  select.value = overrideCompanyNumber ?? "";
+}
+
+function setEmployerLoading(elements: EmployerSignalsElements): void {
+  elements.status.textContent = "Employer signals: loading";
+  elements.matchName.textContent = "Loading…";
+  elements.matchConfidence.textContent = "";
+  elements.sicCodes.textContent = "SIC codes: —";
+  elements.intensity.textContent = "Sector baseline: —";
+  elements.changeButton.disabled = true;
+  elements.select.disabled = true;
+  elements.select.hidden = true;
+}
+
+function setEmployerEmpty(elements: EmployerSignalsElements, message: string): void {
+  elements.status.textContent = "Employer signals: no data";
+  elements.matchName.textContent = message;
+  elements.matchConfidence.textContent = "";
+  elements.sicCodes.textContent = "SIC codes: Not listed";
+  elements.intensity.textContent = "Sector baseline: unavailable";
+  elements.changeButton.disabled = true;
+  elements.select.disabled = true;
+  elements.select.hidden = true;
+}
+
+function setEmployerSignalsState(
+  elements: EmployerSignalsElements,
+  result: EmployerSignalsResult,
+  override?: StoredEmployerOverride | null,
+): void {
+  elements.status.textContent = formatEmployerStatusText(result);
+  elements.matchConfidence.textContent = formatEmployerConfidence(result);
+
+  if (!result.selectedCandidate) {
+    elements.matchName.textContent = result.reason ?? "No match";
+    elements.sicCodes.textContent = "SIC codes: Not listed";
+    elements.intensity.textContent = "Sector baseline: unavailable";
+    elements.changeButton.disabled = true;
+    elements.select.hidden = true;
+    return;
+  }
+
+  elements.matchName.textContent = result.selectedCandidate.title || "Unknown";
+
+  const sicCodes = result.signals?.sic_codes ?? result.selectedCandidate.sic_codes ?? [];
+  elements.sicCodes.textContent = `SIC codes: ${formatSicCodes(sicCodes)}`;
+
+  if (
+    result.signals?.sector_intensity_value !== null &&
+    result.signals?.sector_intensity_value !== undefined
+  ) {
+    const bandLabel = formatBandLabel(result.signals.sector_intensity_band);
+    const value = result.signals.sector_intensity_value.toFixed(2);
+    elements.intensity.textContent = `Sector baseline: ${bandLabel} (${value})`;
+  } else {
+    elements.intensity.textContent = "Sector baseline: unavailable";
+  }
+
+  const hasCandidates = result.candidates.length > 0;
+  elements.changeButton.disabled = !hasCandidates;
+  elements.select.disabled = !hasCandidates;
+  if (hasCandidates) {
+    populateEmployerOptions(elements.select, result.candidates, override?.companyNumber);
+    elements.select.hidden = true;
+  } else {
+    elements.select.hidden = true;
+  }
 }
 
 function setPanelState(
@@ -252,12 +420,22 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
   const telemetry = deps.telemetry ?? noopTelemetry;
   const getSettingsFn = deps.getSettings ?? getSettings;
   const scoreLocationFn = deps.scoreLocation ?? scoreLocation;
+  const fetchEmployerSignalsFn =
+    deps.fetchEmployerSignals ??
+    ((name, hintLocation, override) =>
+      resolveEmployerSignals(name, hintLocation, override ?? undefined));
+  const getEmployerOverrideFn = deps.getEmployerOverride ?? getEmployerOverride;
+  const setEmployerOverrideFn = deps.setEmployerOverride ?? setEmployerOverride;
+  const clearEmployerOverrideFn = deps.clearEmployerOverride ?? clearEmployerOverride;
 
   let elements: PageScoreElements | null = null;
   let currentContext: JobPostingContext | null = null;
   let currentKey = "";
   let scoreRequestId = 0;
+  let employerRequestId = 0;
   let refreshQueued = false;
+  let currentEmployerName = "";
+  let currentEmployerCandidates: EmployerCandidate[] = [];
 
   const ensureElements = (): PageScoreElements => {
     ensureStyles(pageScoreStyles, doc, STYLE_ID);
@@ -288,6 +466,45 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
         ? { ...result, reason: "Job posting marked as remote" }
         : result;
     setPanelState(activeElements, finalResult, locationText, isRemote);
+  };
+
+  const runEmployerSignals = async () => {
+    if (!currentContext) {
+      return;
+    }
+    const activeElements = ensureElements();
+    const employerName = currentContext.jobPosting.hiringOrganizationName;
+    const hintLocation = currentContext.locationText;
+    const requestId = ++employerRequestId;
+
+    currentEmployerName = employerName;
+    currentEmployerCandidates = [];
+
+    if (!employerName) {
+      setEmployerEmpty(activeElements.employer, "Employer not listed");
+      return;
+    }
+
+    setEmployerLoading(activeElements.employer);
+
+    const override = await getEmployerOverrideFn(employerName);
+    let result: EmployerSignalsResult;
+    try {
+      result = await fetchEmployerSignalsFn(employerName, hintLocation, override);
+    } catch (error) {
+      console.error("[EmployerSignals] Failed to load", error);
+      result = {
+        status: "error",
+        candidates: [],
+        reason: "Unable to load employer signals",
+      };
+    }
+    if (requestId !== employerRequestId) {
+      return;
+    }
+
+    currentEmployerCandidates = result.candidates;
+    setEmployerSignalsState(activeElements.employer, result, override);
   };
 
   const refresh = async () => {
@@ -324,21 +541,58 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
       );
     }
 
+    if (!activeElements.root.dataset.employerControls) {
+      activeElements.root.dataset.employerControls = "true";
+      activeElements.employer.changeButton.addEventListener("click", () => {
+        if (activeElements.employer.changeButton.disabled) {
+          return;
+        }
+        activeElements.employer.select.hidden =
+          !activeElements.employer.select.hidden;
+        if (!activeElements.employer.select.hidden) {
+          activeElements.employer.select.focus();
+        }
+      });
+      activeElements.employer.select.addEventListener("change", async () => {
+        if (!currentEmployerName) {
+          return;
+        }
+        const selectedNumber = activeElements.employer.select.value;
+        if (!selectedNumber) {
+          await clearEmployerOverrideFn(currentEmployerName);
+        } else {
+          const candidate = currentEmployerCandidates.find(
+            (item) => item.company_number === selectedNumber,
+          );
+          await setEmployerOverrideFn(currentEmployerName, {
+            companyNumber: selectedNumber,
+            companyName: candidate?.title ?? currentEmployerName,
+            updatedAt: Date.now(),
+          });
+        }
+        activeElements.employer.select.hidden = true;
+        await runEmployerSignals();
+      });
+    }
+
     if (!activeElements.root.dataset.settingsListener) {
       activeElements.root.dataset.settingsListener = "true";
       if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
         chrome.storage.onChanged.addListener((changes, areaName) => {
-          if (areaName !== "sync" || !changes.carbonrankSettings) {
+          if (areaName === "sync" && changes.carbonrankSettings) {
+            void runScore();
             return;
           }
-          void runScore();
+          if (areaName === "local" && changes.carbonrankEmployerOverrides) {
+            void runEmployerSignals();
+          }
         });
       }
     }
 
     if (keyChanged) {
       applyJobDetails(activeElements, context.jobPosting, context.locationText);
-      await runScore();
+      await Promise.all([runScore(), runEmployerSignals()]);
     }
   };
 
