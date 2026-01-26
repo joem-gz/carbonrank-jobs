@@ -8,3 +8,7 @@ coverage
 test-results
 playwright-report
 .env
+.pw-user-data-*
+.pw-tmp
+.pw-home
+.pw-crashpad

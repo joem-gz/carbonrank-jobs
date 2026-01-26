@@ -24,13 +24,17 @@ export function ensureBadge(cardEl: HTMLElement, text: string): HTMLElement {
   return badge;
 }
 
-export function ensureStyles(cssText: string, doc: Document = document): void {
-  if (doc.getElementById(STYLE_ID)) {
+export function ensureStyles(
+  cssText: string,
+  doc: Document = document,
+  styleId: string = STYLE_ID,
+): void {
+  if (doc.getElementById(styleId)) {
     return;
   }
 
   const style = doc.createElement("style");
-  style.id = STYLE_ID;
+  style.id = styleId;
   style.textContent = cssText;
 
   const target = doc.head ?? doc.documentElement;

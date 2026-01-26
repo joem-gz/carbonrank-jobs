@@ -9,7 +9,7 @@
     "server:build": "node scripts/build_server.mjs",
     "server:start": "node server/dist/index.js",
     "test": "vitest run",
-    "test:e2e": "PLAYWRIGHT_BROWSERS_PATH=../.pw-browsers playwright test"
+    "test:e2e": "node scripts/run_e2e.mjs"
   },
   "keywords": [],
   "author": "",
