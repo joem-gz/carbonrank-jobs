@@ -12,16 +12,17 @@
         background: #f7f9f8;
       }
 
-      .example-grid {
-        display: grid;
-        gap: 16px;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      .job-meta {
+        margin-top: 4px;
+        color: #3d4f4a;
       }
+
     </style>
   </head>
   <body>
-    <h1>CarbonRank Widget (Server Render)</h1>
-    <p>Example output from a server-rendered data payload.</p>
+    <h1>Sustainability Analyst</h1>
+    <p class="job-meta">Greenline · London, UK</p>
+    <p>This section renders from JobPosting JSON-LD on the page.</p>
 
     <script type="application/ld+json">
       {
@@ -39,20 +40,11 @@
         }
       }
     </script>
-
-    <div class="example-grid">
-      <span
-        data-carbonrank='{"status":"ok","score":123,"breakdown":{"annualKgCO2e":123}}'
-      ></span>
-      <span data-carbonrank='{"status":"wfh","reason":"Remote role"}'></span>
-      <span
-        data-carbonrank='{"status":"no_data","reason":"Location missing"}'
-      ></span>
-    </div>
-
     <script src="../dist/widget.js"></script>
     <script>
-      window.CarbonRankWidget?.init?.();
+      window.CarbonRankWidget?.init?.({
+        apiBaseUrl: "https://example.test/api/widget/score",
+      });
     </script>
   </body>
 </html>

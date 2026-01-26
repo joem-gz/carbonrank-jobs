@@ -1,32 +1,14 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { build } from "esbuild";
 import { expect, test } from "@playwright/test";
-
-const distDir = resolve("dist");
-
-async function buildWidget() {
-  await build({
-    entryPoints: ["widget/src/index.ts"],
-    outdir: distDir,
-    entryNames: "widget",
-    bundle: true,
-    format: "iife",
-    globalName: "CarbonRankWidget",
-    platform: "browser",
-    sourcemap: true,
-    loader: {
-      ".css": "css",
-    },
-  });
-}
+import { ensureWidgetBuild } from "./widget_build";
 
 test.beforeAll(async () => {
-  await buildWidget();
+  await ensureWidgetBuild();
 });
 
 test("renders server-rendered widget payloads", async ({ page }) => {
-  const examplePath = resolve("examples/widget-jobposting-jsonld.html");
+  const examplePath = resolve("examples/widget-ssr.html");
   await page.goto(pathToFileURL(examplePath).toString(), {
     waitUntil: "domcontentloaded",
   });

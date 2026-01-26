@@ -1,4 +1,11 @@
 import "./styles.css";
+import {
+  extractJobPostingJsonLd,
+  formatJobLocation,
+  JobPostingExtract,
+} from "../../src/extractors/jobposting_jsonld";
+import { classifyLocation } from "../../src/geo/location_classifier";
+import { resolvePlaceFromLocationTokens } from "../../src/geo/place_resolver";
 
 export type WidgetBreakdown = {
   distanceKm?: number;
@@ -19,18 +26,48 @@ export type WidgetPayload = {
 export type WidgetInitOptions = {
   root?: ParentNode;
   doc?: Document;
+  apiBaseUrl?: string;
+  apiKey?: string;
 };
 
 const DATA_ATTR = "data-carbonrank";
 const RENDERED_ATTR = "data-carbonrank-rendered";
+const PAYLOAD_ATTR = "data-carbonrank-payload";
 const MODAL_ID = "carbonrank-widget-modal";
 const MODAL_TITLE_ID = "carbonrank-widget-modal-title";
+const DEFAULT_API_BASE = "/api/widget/score";
+const DETAIL_HOST_ATTR = "data-carbonrank-detail";
 
 type ModalState = {
   modal: HTMLDivElement;
   closeButton: HTMLButtonElement;
   lastActive?: HTMLElement | null;
 };
+
+type WidgetScoreRequest = {
+  title?: string;
+  employer?: string;
+  locationName?: string;
+  lat?: number;
+  lon?: number;
+  remoteFlag?: boolean;
+};
+
+type ResolvedLocation =
+  | {
+      kind: "wfh";
+      reason: string;
+    }
+  | {
+      kind: "no_data";
+      reason: string;
+    }
+  | {
+      kind: "resolved";
+      lat: number;
+      lon: number;
+      locationName: string;
+    };
 
 const modalStates = new WeakMap<Document, ModalState>();
 
@@ -43,6 +80,74 @@ function parsePayload(raw: string | null): WidgetPayload | null {
   } catch {
     return null;
   }
+}
+
+function normalizeText(value: string | null | undefined): string {
+  return value ? value.trim() : "";
+}
+
+function hasServerPayload(root: ParentNode): boolean {
+  if (!(root instanceof Document) && !(root instanceof Element)) {
+    return false;
+  }
+  const nodes = Array.from(root.querySelectorAll<HTMLElement>(`[${DATA_ATTR}]`));
+  return nodes.some((node) => Boolean(normalizeText(node.getAttribute(DATA_ATTR))));
+}
+
+function resolveLocation(
+  locationName: string,
+  lat?: number,
+  lon?: number,
+  allowWfh = true,
+): ResolvedLocation {
+  if (typeof lat === "number" && typeof lon === "number") {
+    return {
+      kind: "resolved",
+      lat,
+      lon,
+      locationName,
+    };
+  }
+
+  const classification = classifyLocation(locationName);
+  if (classification.kind === "wfh" && allowWfh) {
+    return { kind: "wfh", reason: "Remote role" };
+  }
+
+  if (classification.kind === "no_data") {
+    return { kind: "no_data", reason: classification.reason };
+  }
+
+  if (classification.kind === "wfh") {
+    return { kind: "no_data", reason: "Remote role" };
+  }
+
+  const resolved = resolvePlaceFromLocationTokens(classification.tokens);
+  if (resolved.kind === "unresolved") {
+    return { kind: "no_data", reason: "Cannot resolve place" };
+  }
+
+  return {
+    kind: "resolved",
+    lat: resolved.lat,
+    lon: resolved.lon,
+    locationName: resolved.chosenName,
+  };
+}
+
+function isRemoteCandidate(jobPosting: JobPostingExtract): boolean {
+  const normalized = jobPosting.jobLocationType.map((value) => value.toUpperCase());
+  return normalized.includes("TELECOMMUTE") ||
+    jobPosting.applicantLocationRequirements.length > 0;
+}
+
+function extractGeo(jobPosting: JobPostingExtract): { lat?: number; lon?: number } {
+  for (const location of jobPosting.jobLocations) {
+    if (typeof location.latitude === "number" && typeof location.longitude === "number") {
+      return { lat: location.latitude, lon: location.longitude };
+    }
+  }
+  return {};
 }
 
 function formatBadgeText(payload: WidgetPayload | null): string {
@@ -179,7 +284,11 @@ function openModal(doc: Document, trigger?: HTMLElement | null): void {
 }
 
 function renderWidget(host: HTMLElement, payload: WidgetPayload | null, doc: Document): void {
-  if (host.getAttribute(RENDERED_ATTR) === "true") {
+  const payloadKey = JSON.stringify(payload ?? {});
+  if (
+    host.getAttribute(RENDERED_ATTR) === "true" &&
+    host.getAttribute(PAYLOAD_ATTR) === payloadKey
+  ) {
     return;
   }
 
@@ -217,6 +326,165 @@ function renderWidget(host: HTMLElement, payload: WidgetPayload | null, doc: Doc
   host.textContent = "";
   host.appendChild(container);
   host.setAttribute(RENDERED_ATTR, "true");
+  host.setAttribute(PAYLOAD_ATTR, payloadKey);
+}
+
+async function fetchScore(
+  request: WidgetScoreRequest,
+  options: WidgetInitOptions,
+): Promise<WidgetPayload> {
+  const apiBaseUrl = options.apiBaseUrl ?? DEFAULT_API_BASE;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (options.apiKey) {
+    headers["x-api-key"] = options.apiKey;
+  }
+
+  try {
+    const response = await fetch(apiBaseUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      return {
+        status: "error",
+        reason: `Score request failed (${response.status})`,
+      };
+    }
+
+    const payload = (await response.json()) as WidgetPayload;
+    if (!payload.status) {
+      return { status: "error", reason: "Invalid score response" };
+    }
+
+    return payload;
+  } catch {
+    return { status: "error", reason: "Score request failed" };
+  }
+}
+
+function buildRequestKey(request: WidgetScoreRequest): string {
+  return JSON.stringify(request);
+}
+
+async function requestScore(
+  host: HTMLElement,
+  request: WidgetScoreRequest,
+  options: WidgetInitOptions,
+  doc: Document,
+): Promise<void> {
+  const requestKey = buildRequestKey(request);
+  if (
+    host.dataset.carbonrankRequestKey === requestKey &&
+    host.dataset.carbonrankRequestState === "done"
+  ) {
+    return;
+  }
+
+  host.dataset.carbonrankRequestKey = requestKey;
+  host.dataset.carbonrankRequestState = "loading";
+  renderWidget(host, { status: "loading" }, doc);
+
+  const payload = await fetchScore(request, options);
+  renderWidget(host, payload, doc);
+  host.dataset.carbonrankRequestState = "done";
+}
+
+function ensureDetailHost(doc: Document): HTMLElement {
+  const existing = doc.querySelector(`[${DETAIL_HOST_ATTR}]`);
+  if (existing instanceof HTMLElement) {
+    return existing;
+  }
+
+  const host = doc.createElement("div");
+  host.setAttribute(DETAIL_HOST_ATTR, "true");
+
+  const heading = doc.querySelector("h1");
+  if (heading?.parentElement) {
+    heading.insertAdjacentElement("afterend", host);
+  } else {
+    const target = doc.body ?? doc.documentElement;
+    target.prepend(host);
+  }
+
+  return host;
+}
+
+function renderResolvedPayload(
+  host: HTMLElement,
+  resolved: ResolvedLocation,
+  doc: Document,
+): void {
+  if (resolved.kind === "wfh") {
+    renderWidget(host, { status: "wfh", reason: resolved.reason }, doc);
+    return;
+  }
+
+  if (resolved.kind === "no_data") {
+    renderWidget(host, { status: "no_data", reason: resolved.reason }, doc);
+  }
+}
+
+function buildJobPostingRequest(
+  jobPosting: JobPostingExtract,
+  locationName: string,
+  lat: number,
+  lon: number,
+  remoteFlag: boolean,
+): WidgetScoreRequest {
+  return {
+    title: jobPosting.title,
+    employer: jobPosting.hiringOrganizationName,
+    locationName,
+    lat,
+    lon,
+    remoteFlag,
+  };
+}
+
+function handleJobPosting(
+  jobPosting: JobPostingExtract,
+  options: WidgetInitOptions,
+  doc: Document,
+): void {
+  const host = ensureDetailHost(doc);
+  const remoteFlag = isRemoteCandidate(jobPosting);
+  if (remoteFlag) {
+    renderWidget(host, { status: "wfh", reason: "Remote role" }, doc);
+    return;
+  }
+
+  const locationName = formatJobLocation(jobPosting);
+  const { lat, lon } = extractGeo(jobPosting);
+  const resolved = resolveLocation(locationName, lat, lon);
+
+  if (resolved.kind !== "resolved") {
+    renderResolvedPayload(host, resolved, doc);
+    return;
+  }
+
+  const request = buildJobPostingRequest(
+    jobPosting,
+    resolved.locationName,
+    resolved.lat,
+    resolved.lon,
+    remoteFlag,
+  );
+  void requestScore(host, request, options, doc);
+}
+
+function initJobPosting(options: WidgetInitOptions, doc: Document): void {
+  if (hasServerPayload(options.root ?? doc)) {
+    return;
+  }
+  const jobPostings = extractJobPostingJsonLd(doc);
+  if (jobPostings.length === 0) {
+    return;
+  }
+  handleJobPosting(jobPostings[0], options, doc);
 }
 
 export function renderAll(options: WidgetInitOptions = {}): void {
@@ -231,7 +499,10 @@ export function renderAll(options: WidgetInitOptions = {}): void {
 
 export function init(options: WidgetInitOptions = {}): void {
   const doc = resolveDocument(options);
-  const run = () => renderAll(options);
+  const run = () => {
+    renderAll(options);
+    initJobPosting(options, doc);
+  };
 
   if (doc.readyState === "loading") {
     doc.addEventListener("DOMContentLoaded", run, { once: true });
