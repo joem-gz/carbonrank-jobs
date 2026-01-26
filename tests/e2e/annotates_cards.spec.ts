@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdtempSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test, expect, chromium } from "@playwright/test";
 
@@ -8,17 +7,26 @@ const fixtureHtml = readFileSync(
   resolve("tests/fixtures/reed_search_results_e2e.html"),
   "utf-8",
 );
+const modalHtml = readFileSync(
+  resolve("tests/fixtures/reed_job_details_drawer_modal.html"),
+  "utf-8",
+);
 
 test("annotates Reed cards with expected badge states", async () => {
   test.setTimeout(60_000);
   const extensionPath = resolve("dist");
-  const userDataDir = mkdtempSync(join(tmpdir(), "carbonrank-e2e-"));
+  const userDataDir = mkdtempSync(join(process.cwd(), ".pw-user-data-"));
+  const crashpadDir = join(process.cwd(), ".pw-crashpad");
+  mkdirSync(crashpadDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
     headless: false,
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
+      `--crash-dumps-dir=${crashpadDir}`,
+      "--disable-crashpad",
+      "--disable-crash-reporter",
     ],
   });
 
@@ -66,6 +74,17 @@ test("annotates Reed cards with expected badge states", async () => {
   await expect(badges.nth(0)).toContainText("kgCO2e/yr");
   await expect(badges.nth(1)).toHaveText("0 kgCO2e/yr");
   await expect(badges.nth(2)).toHaveText("No data");
+
+  const pill = page.locator(".carbonrank-page-score__pill");
+  await expect(pill).toHaveCount(0);
+
+  await page.evaluate((html) => {
+    const root = document.getElementById("modal-root") ?? document.body;
+    root.insertAdjacentHTML("beforeend", html);
+  }, modalHtml);
+
+  await expect(pill).toBeVisible();
+  await expect(badges).toHaveCount(3);
 
   await context.close();
 });

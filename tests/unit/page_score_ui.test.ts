@@ -37,4 +37,30 @@ describe("page score UI", () => {
     expect(doc.querySelectorAll("#carbonrank-page-score-root")).toHaveLength(1);
     expect(doc.querySelectorAll(".carbonrank-page-score__pill")).toHaveLength(1);
   });
+
+  it("shows entry point when job drawer modal appears", async () => {
+    const doc = loadFixture("../fixtures/reed_search_results_minimal.html");
+    const scoreLocation = vi.fn().mockResolvedValue({
+      status: "no_data",
+      reason: "Missing location",
+    });
+
+    await initPageScore({
+      doc,
+      getSettings: async () => settings,
+      scoreLocation,
+    });
+
+    expect(doc.querySelectorAll(".carbonrank-page-score__pill")).toHaveLength(0);
+
+    const modalDoc = loadFixture("../fixtures/reed_job_details_drawer_modal.html");
+    doc.body?.insertAdjacentHTML(
+      "beforeend",
+      modalDoc.body?.innerHTML ?? "",
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(doc.querySelectorAll(".carbonrank-page-score__pill")).toHaveLength(1);
+  });
 });

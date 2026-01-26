@@ -39,6 +39,11 @@ export const selectors = {
 };
 
 const PREFERRED_CARD_SELECTOR = "div[class*=\"job-card_jobCard__body\"]";
+const EXCLUDED_CONTAINER_SELECTOR =
+  "[aria-label*='breadcrumb' i], [class*='breadcrumb'], [class*='bread-crumb'], " +
+  "[data-qa='job-details-drawer-modal'], " +
+  "[data-qa='job-details-drawer-modal-body'], " +
+  "[data-qa='job-details-drawer-modal-header']";
 
 export function matches(url: URL): boolean {
   return url.hostname.endsWith("reed.co.uk") && url.pathname.includes("/jobs");
@@ -47,6 +52,10 @@ export function matches(url: URL): boolean {
 function preferCards(cards: HTMLElement[]): HTMLElement[] {
   const preferred = cards.filter((card) => card.matches(PREFERRED_CARD_SELECTOR));
   return preferred.length > 0 ? preferred : cards;
+}
+
+function isInExcludedContainer(element: Element): boolean {
+  return element.closest(EXCLUDED_CONTAINER_SELECTOR) !== null;
 }
 
 function dedupeNested(cards: HTMLElement[]): HTMLElement[] {
@@ -61,6 +70,9 @@ export function findCards(root: ParentNode): HTMLElement[] {
   for (const selector of selectors.stableCardSelectors) {
     for (const el of root.querySelectorAll(selector)) {
       if (el instanceof HTMLElement) {
+        if (isInExcludedContainer(el)) {
+          continue;
+        }
         cards.add(el);
       }
     }
@@ -75,8 +87,11 @@ export function findCards(root: ParentNode): HTMLElement[] {
     if (!(link instanceof HTMLElement)) {
       continue;
     }
+    if (isInExcludedContainer(link)) {
+      continue;
+    }
     const card = link.closest(selectors.fallbackCardClosest);
-    if (card instanceof HTMLElement) {
+    if (card instanceof HTMLElement && !isInExcludedContainer(card)) {
       cards.add(card);
     }
   }

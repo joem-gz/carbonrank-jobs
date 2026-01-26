@@ -4,6 +4,7 @@ import {
   isRemoteJobPosting,
   JobPostingExtract,
 } from "../../extractors/jobposting_jsonld";
+import { extractReedModalJobPosting } from "../../sites/reed/job_details_modal";
 import { scoreLocation } from "../../scoring/location_scoring";
 import { ScoreBreakdown, ScoreResult } from "../../scoring/types";
 import { getSettings, Settings } from "../../storage/settings";
@@ -32,6 +33,12 @@ export type PageScoreDependencies = {
   getSettings?: () => Promise<Settings>;
   scoreLocation?: (locationName: string, settings: Settings) => Promise<ScoreResult>;
   telemetry?: Telemetry;
+};
+
+type JobPostingContext = {
+  jobPosting: JobPostingExtract;
+  locationText: string;
+  isRemote: boolean;
 };
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
@@ -212,62 +219,147 @@ function pickJobPosting(postings: JobPostingExtract[]): JobPostingExtract {
   );
 }
 
-export async function initPageScore(deps: PageScoreDependencies = {}): Promise<void> {
-  const doc = deps.doc ?? document;
+function buildContextKey(context: JobPostingContext): string {
+  const { jobPosting, locationText, isRemote } = context;
+  return [
+    jobPosting.title,
+    jobPosting.hiringOrganizationName,
+    locationText,
+    isRemote ? "remote" : "onsite",
+  ].join("|");
+}
+
+function resolveJobPostingContext(doc: Document): JobPostingContext | null {
   const postings = extractJobPostingJsonLd(doc);
-  if (postings.length === 0) {
-    return;
+  if (postings.length > 0) {
+    const jobPosting = pickJobPosting(postings);
+    const isRemote = isRemoteJobPosting(jobPosting);
+    const locationText = isRemote ? "Remote" : formatJobLocation(jobPosting);
+    return { jobPosting, locationText, isRemote };
   }
 
-  ensureStyles(pageScoreStyles, doc, STYLE_ID);
-  const elements = ensurePageScoreElements(doc);
-  const jobPosting = pickJobPosting(postings);
-  const isRemote = isRemoteJobPosting(jobPosting);
-  const locationText = isRemote ? "Remote" : formatJobLocation(jobPosting);
+  const modalPosting = extractReedModalJobPosting(doc);
+  if (modalPosting) {
+    const locationText = formatJobLocation(modalPosting);
+    return { jobPosting: modalPosting, locationText, isRemote: false };
+  }
 
-  applyJobDetails(elements, jobPosting, locationText);
-  setPanelState(elements, { status: "loading" }, locationText, isRemote);
+  return null;
+}
 
+export async function initPageScore(deps: PageScoreDependencies = {}): Promise<void> {
+  const doc = deps.doc ?? document;
   const telemetry = deps.telemetry ?? noopTelemetry;
   const getSettingsFn = deps.getSettings ?? getSettings;
   const scoreLocationFn = deps.scoreLocation ?? scoreLocation;
 
+  let elements: PageScoreElements | null = null;
+  let currentContext: JobPostingContext | null = null;
+  let currentKey = "";
+  let scoreRequestId = 0;
+  let refreshQueued = false;
+
+  const ensureElements = (): PageScoreElements => {
+    ensureStyles(pageScoreStyles, doc, STYLE_ID);
+    if (!elements) {
+      elements = ensurePageScoreElements(doc);
+    }
+    return elements;
+  };
+
   const runScore = async () => {
-    setPanelState(elements, { status: "loading" }, locationText, isRemote);
+    if (!currentContext) {
+      return;
+    }
+    const activeElements = ensureElements();
+    const { locationText, isRemote } = currentContext;
+    const requestId = ++scoreRequestId;
+
+    setPanelState(activeElements, { status: "loading" }, locationText, isRemote);
     telemetry.trackEvent("page_score_requested", { remote: isRemote });
     const settings = await getSettingsFn();
     const locationName = isRemote ? "Work from home" : locationText;
     const result = await scoreLocationFn(locationName, settings);
+    if (requestId !== scoreRequestId) {
+      return;
+    }
     const finalResult =
       isRemote && result.status === "wfh"
         ? { ...result, reason: "Job posting marked as remote" }
         : result;
-    setPanelState(elements, finalResult, locationText, isRemote);
+    setPanelState(activeElements, finalResult, locationText, isRemote);
   };
 
-  if (!elements.root.dataset.bound) {
-    elements.root.dataset.bound = "true";
-    elements.pill.addEventListener("click", () => {
-      const open = elements.panel.hidden;
-      togglePanel(elements, open);
-      if (open) {
-        telemetry.trackEvent("page_score_opened");
+  const refresh = async () => {
+    const context = resolveJobPostingContext(doc);
+    if (!context) {
+      if (elements) {
+        togglePanel(elements, false);
+        elements.root.hidden = true;
       }
-    });
-    elements.closeButton.addEventListener("click", () => togglePanel(elements, false));
-  }
+      currentContext = null;
+      currentKey = "";
+      return;
+    }
 
-  if (!elements.root.dataset.settingsListener) {
-    elements.root.dataset.settingsListener = "true";
-    if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
-      chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName !== "sync" || !changes.carbonrankSettings) {
-          return;
+    const nextKey = buildContextKey(context);
+    const activeElements = ensureElements();
+    const keyChanged = nextKey !== currentKey || activeElements.root.hidden;
+
+    currentContext = context;
+    currentKey = nextKey;
+    activeElements.root.hidden = false;
+
+    if (!activeElements.root.dataset.bound) {
+      activeElements.root.dataset.bound = "true";
+      activeElements.pill.addEventListener("click", () => {
+        const open = activeElements.panel.hidden;
+        togglePanel(activeElements, open);
+        if (open) {
+          telemetry.trackEvent("page_score_opened");
         }
-        void runScore();
       });
+      activeElements.closeButton.addEventListener("click", () =>
+        togglePanel(activeElements, false),
+      );
+    }
+
+    if (!activeElements.root.dataset.settingsListener) {
+      activeElements.root.dataset.settingsListener = "true";
+      if (typeof chrome !== "undefined" && chrome.storage?.onChanged) {
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName !== "sync" || !changes.carbonrankSettings) {
+            return;
+          }
+          void runScore();
+        });
+      }
+    }
+
+    if (keyChanged) {
+      applyJobDetails(activeElements, context.jobPosting, context.locationText);
+      await runScore();
+    }
+  };
+
+  const scheduleRefresh = () => {
+    if (refreshQueued) {
+      return;
+    }
+    refreshQueued = true;
+    Promise.resolve().then(() => {
+      refreshQueued = false;
+      void refresh();
+    });
+  };
+
+  if (doc.documentElement && !doc.documentElement.dataset.pageScoreObserver) {
+    doc.documentElement.dataset.pageScoreObserver = "true";
+    if (typeof MutationObserver !== "undefined") {
+      const observer = new MutationObserver(scheduleRefresh);
+      observer.observe(doc.documentElement, { childList: true, subtree: true });
     }
   }
 
-  await runScore();
+  await refresh();
 }
