@@ -28,6 +28,16 @@ export type WidgetInitOptions = {
   doc?: Document;
   apiBaseUrl?: string;
   apiKey?: string;
+  cardSelector?: string;
+  fields?: WidgetCardFields;
+  observeMutations?: boolean;
+};
+
+export type WidgetCardFields = {
+  employer?: string;
+  location?: string;
+  link?: string;
+  title?: string;
 };
 
 const DATA_ATTR = "data-carbonrank";
@@ -36,6 +46,9 @@ const PAYLOAD_ATTR = "data-carbonrank-payload";
 const MODAL_ID = "carbonrank-widget-modal";
 const MODAL_TITLE_ID = "carbonrank-widget-modal-title";
 const DEFAULT_API_BASE = "/api/widget/score";
+const DEFAULT_CARD_SELECTOR = "[data-carbonrank-card]";
+const CARD_PROCESSED_ATTR = "data-carbonrank-card-processed";
+const CARD_HOST_ATTR = "data-carbonrank-card-host";
 const DETAIL_HOST_ATTR = "data-carbonrank-detail";
 
 type ModalState = {
@@ -69,7 +82,12 @@ type ResolvedLocation =
       locationName: string;
     };
 
+type WidgetRuntime = {
+  cardObserver?: MutationObserver;
+};
+
 const modalStates = new WeakMap<Document, ModalState>();
+const widgetRuntimes = new WeakMap<Document, WidgetRuntime>();
 
 function parsePayload(raw: string | null): WidgetPayload | null {
   if (!raw) {
@@ -82,8 +100,26 @@ function parsePayload(raw: string | null): WidgetPayload | null {
   }
 }
 
+function getRuntime(doc: Document): WidgetRuntime {
+  const existing = widgetRuntimes.get(doc);
+  if (existing) {
+    return existing;
+  }
+  const runtime: WidgetRuntime = {};
+  widgetRuntimes.set(doc, runtime);
+  return runtime;
+}
+
 function normalizeText(value: string | null | undefined): string {
   return value ? value.trim() : "";
+}
+
+function parseNumber(value: string | null | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function hasServerPayload(root: ParentNode): boolean {
@@ -148,6 +184,16 @@ function extractGeo(jobPosting: JobPostingExtract): { lat?: number; lon?: number
     }
   }
   return {};
+}
+
+function createDebounced(callback: () => void, delayMs: number): () => void {
+  let timer: number | undefined;
+  return () => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+    timer = window.setTimeout(callback, delayMs);
+  };
 }
 
 function formatBadgeText(payload: WidgetPayload | null): string {
@@ -476,6 +522,125 @@ function handleJobPosting(
   void requestScore(host, request, options, doc);
 }
 
+function resolveCardText(card: HTMLElement, selector?: string): string {
+  if (!selector) {
+    return "";
+  }
+  const element = card.querySelector(selector);
+  if (!(element instanceof HTMLElement)) {
+    return "";
+  }
+  return normalizeText(element.textContent);
+}
+
+function resolveCardAttribute(card: HTMLElement, attribute: string): string {
+  return normalizeText(card.getAttribute(attribute));
+}
+
+function resolveCardLink(
+  card: HTMLElement,
+  selector?: string,
+): { href: string; text: string } {
+  if (selector) {
+    const link = card.querySelector(selector);
+    if (link instanceof HTMLAnchorElement) {
+      return {
+        href: link.href,
+        text: normalizeText(link.textContent),
+      };
+    }
+    if (link instanceof HTMLElement) {
+      return {
+        href: normalizeText(link.getAttribute("href")),
+        text: normalizeText(link.textContent),
+      };
+    }
+  }
+
+  return {
+    href: resolveCardAttribute(card, "data-carbonrank-link"),
+    text: resolveCardAttribute(card, "data-carbonrank-title"),
+  };
+}
+
+function ensureCardHost(card: HTMLElement, doc: Document): HTMLElement {
+  const existing = card.querySelector(`[${CARD_HOST_ATTR}]`);
+  if (existing instanceof HTMLElement) {
+    return existing;
+  }
+  const host = doc.createElement("div");
+  host.setAttribute(CARD_HOST_ATTR, "true");
+  card.prepend(host);
+  return host;
+}
+
+function handleCard(
+  card: HTMLElement,
+  options: WidgetInitOptions,
+  doc: Document,
+): void {
+  if (card.getAttribute(CARD_PROCESSED_ATTR) === "true") {
+    return;
+  }
+
+  const host = ensureCardHost(card, doc);
+  card.setAttribute(CARD_PROCESSED_ATTR, "true");
+
+  const fields = options.fields ?? {};
+  const employer =
+    resolveCardText(card, fields.employer) ||
+    resolveCardAttribute(card, "data-carbonrank-employer");
+  const locationName =
+    resolveCardText(card, fields.location) ||
+    resolveCardAttribute(card, "data-carbonrank-location");
+  const linkInfo = resolveCardLink(card, fields.link);
+  const title =
+    resolveCardText(card, fields.title) ||
+    linkInfo.text ||
+    resolveCardAttribute(card, "data-carbonrank-title");
+
+  const lat =
+    parseNumber(card.getAttribute("data-carbonrank-lat")) ??
+    parseNumber(card.getAttribute("data-carbonrank-latitude"));
+  const lon =
+    parseNumber(card.getAttribute("data-carbonrank-lon")) ??
+    parseNumber(card.getAttribute("data-carbonrank-longitude"));
+
+  const resolved = resolveLocation(locationName, lat, lon);
+  if (resolved.kind !== "resolved") {
+    renderResolvedPayload(host, resolved, doc);
+    return;
+  }
+
+  const request: WidgetScoreRequest = {
+    title,
+    employer,
+    locationName: resolved.locationName,
+    lat: resolved.lat,
+    lon: resolved.lon,
+    remoteFlag: false,
+  };
+
+  void requestScore(host, request, options, doc);
+}
+
+function scanCards(options: WidgetInitOptions, doc: Document): void {
+  const selector = options.cardSelector ?? DEFAULT_CARD_SELECTOR;
+  if (!selector) {
+    return;
+  }
+
+  const root = options.root ?? doc;
+  const cards = Array.from(root.querySelectorAll<HTMLElement>(selector));
+  if (cards.length === 0) {
+    return;
+  }
+
+  for (const card of cards) {
+    handleCard(card, options, doc);
+  }
+}
+
 function initJobPosting(options: WidgetInitOptions, doc: Document): void {
   if (hasServerPayload(options.root ?? doc)) {
     return;
@@ -485,6 +650,23 @@ function initJobPosting(options: WidgetInitOptions, doc: Document): void {
     return;
   }
   handleJobPosting(jobPostings[0], options, doc);
+}
+
+function initCardObserver(options: WidgetInitOptions, doc: Document): void {
+  if (options.observeMutations === false) {
+    return;
+  }
+
+  const runtime = getRuntime(doc);
+  if (runtime.cardObserver) {
+    return;
+  }
+
+  const scheduleScan = createDebounced(() => scanCards(options, doc), 150);
+  const target = doc.body ?? doc.documentElement;
+  const observer = new MutationObserver(scheduleScan);
+  observer.observe(target, { childList: true, subtree: true });
+  runtime.cardObserver = observer;
 }
 
 export function renderAll(options: WidgetInitOptions = {}): void {
@@ -502,6 +684,8 @@ export function init(options: WidgetInitOptions = {}): void {
   const run = () => {
     renderAll(options);
     initJobPosting(options, doc);
+    scanCards(options, doc);
+    initCardObserver(options, doc);
   };
 
   if (doc.readyState === "loading") {
