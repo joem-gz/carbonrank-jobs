@@ -22,6 +22,18 @@ describe("reed adapter", () => {
     expect(cards).toHaveLength(2);
   });
 
+  it("ignores breadcrumb links on job detail pages", () => {
+    const doc = loadFixture("../fixtures/reed_job_detail_breadcrumbs.html");
+    const cards = findCards(doc);
+    expect(cards).toHaveLength(1);
+  });
+
+  it("ignores job details drawer modal", () => {
+    const doc = loadFixture("../fixtures/reed_search_results_modal.html");
+    const cards = findCards(doc);
+    expect(cards).toHaveLength(1);
+  });
+
   it("finds cards with job-title button layout", () => {
     const doc = loadFixture("../fixtures/reed_search_results_button.html");
     const cards = findCards(doc);

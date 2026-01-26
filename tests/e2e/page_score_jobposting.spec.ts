@@ -1,18 +1,13 @@
-import { readFileSync } from "node:fs";
-import { mkdtempSync, mkdirSync } from "node:fs";
+import { readFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { test, expect, chromium } from "@playwright/test";
 
 const fixtureHtml = readFileSync(
-  resolve("tests/fixtures/reed_search_results_e2e.html"),
-  "utf-8",
-);
-const modalHtml = readFileSync(
-  resolve("tests/fixtures/reed_job_details_drawer_modal.html"),
+  resolve("tests/fixtures/jobposting_page.html"),
   "utf-8",
 );
 
-test("annotates Reed cards with expected badge states", async () => {
+test("shows page score UI for JobPosting JSON-LD", async () => {
   test.setTimeout(60_000);
   const extensionPath = resolve("dist");
   const userDataDir = mkdtempSync(join(process.cwd(), ".pw-user-data-"));
@@ -30,7 +25,7 @@ test("annotates Reed cards with expected badge states", async () => {
     ],
   });
 
-  await context.route("https://www.reed.co.uk/jobs*", async (route) => {
+  await context.route("https://example.com/job*", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "text/html",
@@ -50,9 +45,7 @@ test("annotates Reed cards with expected badge states", async () => {
   });
 
   const page = await context.newPage();
-  await page.goto("https://www.reed.co.uk/jobs?e2e=1", {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto("https://example.com/job?id=1", { waitUntil: "domcontentloaded" });
 
   const worker =
     context.serviceWorkers()[0] ??
@@ -68,23 +61,16 @@ test("annotates Reed cards with expected badge states", async () => {
     }),
   );
 
-  const badges = page.locator("[data-carbonrank-badge]");
-  await expect(badges).toHaveCount(3);
-
-  await expect(badges.nth(0)).toContainText("kgCO2e/yr");
-  await expect(badges.nth(1)).toHaveText("0 kgCO2e/yr");
-  await expect(badges.nth(2)).toHaveText("No data");
-
   const pill = page.locator(".carbonrank-page-score__pill");
-  await expect(pill).toHaveCount(0);
-
-  await page.evaluate((html) => {
-    const root = document.getElementById("modal-root") ?? document.body;
-    root.insertAdjacentHTML("beforeend", html);
-  }, modalHtml);
-
   await expect(pill).toBeVisible();
-  await expect(badges).toHaveCount(3);
+
+  await pill.click();
+
+  const panel = page.locator(".carbonrank-page-score__panel");
+  await expect(panel).toBeVisible();
+
+  const scoreValue = page.locator(".carbonrank-page-score__score-value");
+  await expect(scoreValue).toContainText("kgCO2e/yr");
 
   await context.close();
 });
