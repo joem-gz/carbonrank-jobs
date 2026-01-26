@@ -10,6 +10,7 @@ import {
   fetchCompaniesHouseSearch,
   rankCompanies,
 } from "./companies_house";
+import { loadOnsIntensityMap, resolveOnsIntensity } from "./ons_intensity";
 import { createRateLimiter } from "./rate_limit";
 
 type ProxyResponse = {
@@ -27,6 +28,8 @@ type EmployerResolveResponse = {
 type EmployerSignalsResponse = {
   company_number: string;
   sic_codes: string[];
+  sector_intensity_band: string;
+  sector_intensity_value: number | null;
   sources: string[];
   cached: boolean;
 };
@@ -88,6 +91,7 @@ const employerProfileCache = createLruCache<CompaniesHouseProfile>({
   ttlMs: EMPLOYER_PROFILE_TTL_MS,
   maxSize: EMPLOYER_CACHE_MAX,
 });
+const onsIntensityMap = loadOnsIntensityMap();
 const rateLimiter = createRateLimiter({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX,
@@ -268,10 +272,17 @@ async function handleEmployerSignals(
     const sicCodes = Array.isArray(profile.sic_codes)
       ? profile.sic_codes.filter(Boolean)
       : [];
+    const intensity = resolveOnsIntensity(sicCodes, onsIntensityMap);
+    const sources = ["companies_house"];
+    if (intensity.value !== null) {
+      sources.push("ons");
+    }
     const payload: EmployerSignalsResponse = {
       company_number: profile.company_number ?? companyNumber,
       sic_codes: sicCodes,
-      sources: ["companies_house"],
+      sector_intensity_band: intensity.band,
+      sector_intensity_value: intensity.value,
+      sources,
       cached,
     };
     sendJson(response, 200, payload);

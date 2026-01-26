@@ -105,6 +105,8 @@ Response:
 {
   company_number,
   sic_codes,
+  sector_intensity_band,
+  sector_intensity_value,
   sources,
   cached
 }
