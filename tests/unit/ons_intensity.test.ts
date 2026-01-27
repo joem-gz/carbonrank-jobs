@@ -11,12 +11,18 @@ const map: OnsIntensityMap = {
     },
   },
   exact: {
-    "6202": 0.5,
-    "2011": 4,
+    "620": 0.5,
+    "201": 4,
   },
   groups: {
     "62": 0.8,
     "20": 2,
+  },
+  descriptions: {
+    "620": "IT consultancy",
+    "201": "Industrial gases",
+    "62": "Computer programming",
+    "20": "Chemicals",
   },
 };
 
@@ -29,20 +35,22 @@ describe("ONS intensity mapping", () => {
   });
 
   it("prefers exact SIC matches", () => {
-    const result = resolveOnsIntensity(["6202"], map);
+    const result = resolveOnsIntensity(["62020"], map);
     expect(result).toEqual({
       value: 0.5,
       band: "low",
-      matched_code: "6202",
+      matched_code: "620",
+      description: "IT consultancy",
     });
   });
 
   it("falls back to SIC2 group when needed", () => {
-    const result = resolveOnsIntensity(["6210"], map);
+    const result = resolveOnsIntensity(["62100"], map);
     expect(result).toEqual({
       value: 0.8,
       band: "low",
       matched_code: "62",
+      description: "Computer programming",
     });
   });
 
@@ -51,7 +59,8 @@ describe("ONS intensity mapping", () => {
     expect(result).toEqual({
       value: 4,
       band: "high",
-      matched_code: "2011",
+      matched_code: "201",
+      description: "Industrial gases",
     });
   });
 });

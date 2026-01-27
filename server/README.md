@@ -107,6 +107,8 @@ Response:
   sic_codes,
   sector_intensity_band,
   sector_intensity_value,
+  sector_intensity_sic_code,
+  sector_description,
   sources,
   cached
 }

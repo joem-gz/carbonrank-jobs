@@ -222,7 +222,18 @@ function formatBandLabel(band: string): string {
   return band.charAt(0).toUpperCase() + band.slice(1);
 }
 
-function formatSicCodes(codes: string[]): string {
+function formatSicCodes(
+  codes: string[],
+  description?: string | null,
+  matchedCode?: string | null,
+): string {
+  if (description) {
+    const codeLabel = matchedCode || codes[0];
+    if (codeLabel) {
+      return `${codeLabel} — ${description}`;
+    }
+    return description;
+  }
   return codes.length > 0 ? codes.join(", ") : "Not listed";
 }
 
@@ -286,7 +297,11 @@ function setEmployerSignalsState(
   elements.matchName.textContent = result.selectedCandidate.title || "Unknown";
 
   const sicCodes = result.signals?.sic_codes ?? result.selectedCandidate.sic_codes ?? [];
-  elements.sicCodes.textContent = `SIC codes: ${formatSicCodes(sicCodes)}`;
+  elements.sicCodes.textContent = `SIC codes: ${formatSicCodes(
+    sicCodes,
+    result.signals?.sector_description,
+    result.signals?.sector_intensity_sic_code,
+  )}`;
 
   if (
     result.signals?.sector_intensity_value !== null &&

@@ -18,6 +18,8 @@ export type EmployerSignalsResponse = {
   sic_codes: string[];
   sector_intensity_band: string;
   sector_intensity_value: number | null;
+  sector_intensity_sic_code: string | null;
+  sector_description: string | null;
   sources: string[];
   cached: boolean;
 };

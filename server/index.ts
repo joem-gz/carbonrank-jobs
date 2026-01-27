@@ -30,6 +30,8 @@ type EmployerSignalsResponse = {
   sic_codes: string[];
   sector_intensity_band: string;
   sector_intensity_value: number | null;
+  sector_intensity_sic_code: string | null;
+  sector_description: string | null;
   sources: string[];
   cached: boolean;
 };
@@ -282,6 +284,8 @@ async function handleEmployerSignals(
       sic_codes: sicCodes,
       sector_intensity_band: intensity.band,
       sector_intensity_value: intensity.value,
+      sector_intensity_sic_code: intensity.matched_code ?? null,
+      sector_description: intensity.description ?? null,
       sources,
       cached,
     };

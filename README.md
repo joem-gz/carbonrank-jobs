@@ -62,6 +62,13 @@ npm run server:build
 npm run server:start
 ```
 
+## Data sources
+
+- Companies House API — employer SIC codes (API key required).
+- ONS Environmental Accounts — Atmospheric emissions: GHG emissions intensity
+  (Table 1b). Snapshot stored in `server/data/ons/04atmosphericemissionsghgintensity.xlsx`
+  under the Open Government Licence.
+
 ## Privacy
 
 - Stored locally: home postcode, commute mode, office days per week (sync storage).

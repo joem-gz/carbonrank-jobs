@@ -14,17 +14,25 @@ export type OnsIntensityMap = {
   };
   exact: Record<string, number>;
   groups: Record<string, number>;
+  descriptions?: Record<string, string>;
 };
 
 export type OnsIntensityResult = {
   value: number | null;
   band: OnsIntensityBand;
   matched_code?: string;
+  description?: string;
 };
 
 const DEFAULT_MAP_PATH = resolve(
   process.cwd(),
   "server",
+  "data",
+  "ons",
+  "ons_intensity_map.json",
+);
+const FALLBACK_MAP_PATH = resolve(
+  process.cwd(),
   "data",
   "ons",
   "ons_intensity_map.json",
@@ -37,13 +45,20 @@ export function loadOnsIntensityMap(path: string = DEFAULT_MAP_PATH): OnsIntensi
     return cachedMap;
   }
 
-  try {
-    const payload = readFileSync(path, "utf-8");
-    cachedMap = JSON.parse(payload) as OnsIntensityMap;
-  } catch (error) {
-    console.warn("[ONSIntensity] Unable to load map", error);
-    cachedMap = null;
+  const candidates = path === DEFAULT_MAP_PATH ? [path, FALLBACK_MAP_PATH] : [path];
+  let lastError: unknown;
+
+  for (const candidate of candidates) {
+    try {
+      const payload = readFileSync(candidate, "utf-8");
+      cachedMap = JSON.parse(payload) as OnsIntensityMap;
+      return cachedMap;
+    } catch (error) {
+      lastError = error;
+    }
   }
+  console.warn("[ONSIntensity] Unable to load map", lastError);
+  cachedMap = null;
   return cachedMap;
 }
 
@@ -84,6 +99,13 @@ function findMatch(code: string, map: OnsIntensityMap): { value: number; matched
     }
   }
 
+  if (normalized.length >= 3) {
+    const exactThree = normalized.slice(0, 3);
+    if (map.exact[exactThree] !== undefined) {
+      return { value: map.exact[exactThree], matched: exactThree, weight: 2 };
+    }
+  }
+
   if (normalized.length >= 2) {
     const group = normalized.slice(0, 2);
     if (map.groups[group] !== undefined) {
@@ -117,9 +139,15 @@ export function resolveOnsIntensity(
     return next.value > current.value ? next : current;
   });
 
+  let description = map.descriptions?.[best.matched];
+  if (!description && map.descriptions && best.matched.length > 2) {
+    description = map.descriptions[best.matched.slice(0, 2)];
+  }
+
   return {
     value: best.value,
     band: pickBand(best.value, map.meta.band_thresholds),
     matched_code: best.matched,
+    description,
   };
 }

@@ -37,6 +37,8 @@ const employerResult: EmployerSignalsResult = {
     sic_codes: ["62020"],
     sector_intensity_band: "low",
     sector_intensity_value: 0.42,
+    sector_intensity_sic_code: "6202",
+    sector_description: "Information technology consultancy activities",
     sources: ["companies_house", "ons"],
     cached: false,
   },
@@ -132,6 +134,11 @@ describe("page score UI", () => {
     const status = doc.querySelector(".carbonrank-page-score__employer-status");
     expect(status?.textContent).toContain("Employer signals: available");
     const sicCodes = doc.querySelector(".carbonrank-page-score__employer-sic");
-    expect(sicCodes?.textContent).toContain("62020");
+    expect(sicCodes?.textContent).toContain("6202");
+    expect(sicCodes?.textContent).toContain(
+      "Information technology consultancy activities",
+    );
+    const intensity = doc.querySelector(".carbonrank-page-score__employer-intensity");
+    expect(intensity?.textContent).toContain("Sector baseline: Low (0.42)");
   });
 });
