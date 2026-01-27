@@ -1,5 +1,7 @@
 .carbonrank-badge {
   display: inline-block;
+  align-self: flex-start;
+  justify-self: flex-start;
   margin: 0 0 8px 0;
   padding: 4px 8px;
   border-radius: 999px;
