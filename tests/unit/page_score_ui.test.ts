@@ -39,6 +39,21 @@ const employerResult: EmployerSignalsResult = {
     sector_intensity_value: 0.42,
     sector_intensity_sic_code: "6202",
     sector_description: "Information technology consultancy activities",
+    sbti: {
+      match_status: "matched",
+      match_confidence: 1,
+      matched_company_name: "Acme Ltd",
+      sbti_id: "40001234",
+      near_term_status: "Targets set",
+      near_term_target_classification: "1.5°C",
+      near_term_target_year: "2030",
+      net_zero_status: "Committed",
+      net_zero_year: "2040",
+      ba15_status: "BA1.5 member",
+      date_updated: "2025-01-12",
+      reason_for_extension_or_removal: null,
+      sources: ["SBTi Companies Taking Action (snapshot)"],
+    },
     sources: ["companies_house", "ons"],
     cached: false,
   },
@@ -156,6 +171,13 @@ describe("page score UI", () => {
     );
     const intensity = doc.querySelector(".carbonrank-page-score__employer-intensity");
     expect(intensity?.textContent).toContain("Sector baseline: Low (0.42)");
+    const sbtiBadge = doc.querySelector(".carbonrank-page-score__employer-sbti-badge");
+    expect(sbtiBadge?.textContent).toContain("Targets set");
+    const sbtiDetails = doc.querySelector(
+      ".carbonrank-page-score__employer-sbti-details",
+    );
+    expect(sbtiDetails?.textContent).toContain("Matched: Acme Ltd");
+    expect(sbtiDetails?.textContent).toContain("Near-term: Targets set");
   });
 
   it("shows employer not disclosed for agency posters", async () => {

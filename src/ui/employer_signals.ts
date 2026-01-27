@@ -9,6 +9,9 @@ export type EmployerSignalsElements = {
   sicCodes: HTMLParagraphElement;
   intensity: HTMLParagraphElement;
   note: HTMLParagraphElement;
+  sbtiBadge: HTMLSpanElement;
+  sbtiDetails: HTMLDivElement;
+  sbtiNote: HTMLParagraphElement;
 };
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
@@ -88,7 +91,42 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
     "Sector baseline is industry average, not company footprint.",
   );
 
-  root.append(title, status, advertiser, matchRow, select, sicCodes, intensity, note);
+  const sbtiRow = createElement(doc, "div", "carbonrank-page-score__employer-sbti");
+  const sbtiLabel = createElement(doc, "span", "carbonrank-page-score__label", "SBTi");
+  const sbtiBadge = createElement(
+    doc,
+    "span",
+    "carbonrank-page-score__employer-sbti-badge",
+    "—",
+  );
+  sbtiRow.append(sbtiLabel, sbtiBadge);
+
+  const sbtiDetails = createElement(
+    doc,
+    "div",
+    "carbonrank-page-score__employer-sbti-details",
+  ) as HTMLDivElement;
+  sbtiDetails.hidden = true;
+  const sbtiNote = createElement(
+    doc,
+    "p",
+    "carbonrank-page-score__employer-sbti-note",
+    "Indicates whether the employer has an SBTi commitment/validated target. It doesn’t quantify the employer’s footprint.",
+  );
+
+  root.append(
+    title,
+    status,
+    advertiser,
+    matchRow,
+    select,
+    sicCodes,
+    intensity,
+    note,
+    sbtiRow,
+    sbtiDetails,
+    sbtiNote,
+  );
 
   return {
     root,
@@ -101,5 +139,8 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
     sicCodes: sicCodes as HTMLParagraphElement,
     intensity: intensity as HTMLParagraphElement,
     note: note as HTMLParagraphElement,
+    sbtiBadge: sbtiBadge as HTMLSpanElement,
+    sbtiDetails,
+    sbtiNote: sbtiNote as HTMLParagraphElement,
   };
 }

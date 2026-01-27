@@ -32,6 +32,7 @@ import {
   EmployerCandidate,
   EmployerResolveResponse,
   EmployerSignalsResult,
+  SbtiMatchResult,
 } from "../../employer/types";
 import {
   clearEmployerOverride,
@@ -171,6 +172,15 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
         note: employerRoot.querySelector(
           ".carbonrank-page-score__employer-note",
         ) as HTMLParagraphElement,
+        sbtiBadge: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-sbti-badge",
+        ) as HTMLSpanElement,
+        sbtiDetails: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-sbti-details",
+        ) as HTMLDivElement,
+        sbtiNote: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-sbti-note",
+        ) as HTMLParagraphElement,
       },
     };
   }
@@ -281,6 +291,113 @@ function formatSicCodes(
   return codes.length > 0 ? codes.join(", ") : "Not listed";
 }
 
+type SbtiBadgeTone = "positive" | "neutral" | "warning" | "muted";
+
+const SBTI_BADGE_CLASSES = ["is-positive", "is-neutral", "is-warning", "is-muted"];
+
+function setSbtiBadge(
+  badge: HTMLSpanElement,
+  label: string,
+  tone: SbtiBadgeTone,
+): void {
+  badge.textContent = label;
+  badge.classList.remove(...SBTI_BADGE_CLASSES);
+  badge.classList.add(`is-${tone}`);
+}
+
+function setSbtiDetails(container: HTMLDivElement, lines: string[]): void {
+  container.innerHTML = "";
+  if (lines.length === 0) {
+    container.hidden = true;
+    return;
+  }
+  const doc = container.ownerDocument;
+  for (const line of lines) {
+    const item = doc.createElement("p");
+    item.textContent = line;
+    container.appendChild(item);
+  }
+  container.hidden = false;
+}
+
+function pickSbtiStatusBadge(sbti: SbtiMatchResult): { label: string; tone: SbtiBadgeTone } {
+  const statuses = [sbti.near_term_status, sbti.net_zero_status].filter(Boolean);
+  if (statuses.includes("Targets set")) {
+    return { label: "Targets set", tone: "positive" };
+  }
+  if (statuses.includes("Committed")) {
+    return { label: "Committed", tone: "neutral" };
+  }
+  if (statuses.includes("Commitment removed")) {
+    return { label: "Commitment removed", tone: "warning" };
+  }
+  return { label: "SBTi record found", tone: "neutral" };
+}
+
+function buildSbtiDetails(sbti: SbtiMatchResult): string[] {
+  const lines: string[] = [];
+  if (sbti.matched_company_name) {
+    lines.push(`Matched: ${sbti.matched_company_name}`);
+  }
+  const nearTerm = [
+    sbti.near_term_status,
+    sbti.near_term_target_classification,
+    sbti.near_term_target_year,
+  ].filter(Boolean) as string[];
+  if (nearTerm.length) {
+    lines.push(`Near-term: ${nearTerm.join(" • ")}`);
+  }
+  const netZero = [sbti.net_zero_status, sbti.net_zero_year].filter(Boolean) as string[];
+  if (netZero.length) {
+    lines.push(`Net-zero: ${netZero.join(" • ")}`);
+  }
+  if (sbti.ba15_status) {
+    const label =
+      sbti.ba15_status === "BA1.5 member"
+        ? "Business Ambition for 1.5°C member"
+        : sbti.ba15_status;
+    lines.push(`BA1.5: ${label}`);
+  }
+  if (sbti.date_updated) {
+    lines.push(`Last updated: ${sbti.date_updated}`);
+  }
+  lines.push("Source: SBTi public dataset (snapshot). Not a measure of actual emissions.");
+  return lines;
+}
+
+function renderSbti(
+  elements: EmployerSignalsElements,
+  sbti: SbtiMatchResult | null | undefined,
+  hasCandidate: boolean,
+): void {
+  if (!hasCandidate || !sbti) {
+    setSbtiBadge(elements.sbtiBadge, "Unavailable", "muted");
+    setSbtiDetails(elements.sbtiDetails, []);
+    return;
+  }
+
+  if (sbti.match_status === "low_confidence") {
+    setSbtiBadge(elements.sbtiBadge, "Possible match (low confidence)", "neutral");
+    const details = [];
+    if (sbti.matched_company_name) {
+      details.push(`Matched: ${sbti.matched_company_name}`);
+    }
+    details.push("Confirm the employer match to view SBTi details.");
+    setSbtiDetails(elements.sbtiDetails, details);
+    return;
+  }
+
+  if (sbti.match_status === "no_match") {
+    setSbtiBadge(elements.sbtiBadge, "No public SBTi record found", "muted");
+    setSbtiDetails(elements.sbtiDetails, []);
+    return;
+  }
+
+  const badge = pickSbtiStatusBadge(sbti);
+  setSbtiBadge(elements.sbtiBadge, badge.label, badge.tone);
+  setSbtiDetails(elements.sbtiDetails, buildSbtiDetails(sbti));
+}
+
 function populateEmployerOptions(
   select: HTMLSelectElement,
   candidates: EmployerCandidate[],
@@ -306,6 +423,8 @@ function setEmployerLoading(elements: EmployerSignalsElements): void {
   elements.matchConfidence.textContent = "";
   elements.sicCodes.textContent = "SIC codes: —";
   elements.intensity.textContent = "Sector baseline: —";
+  setSbtiBadge(elements.sbtiBadge, "—", "muted");
+  setSbtiDetails(elements.sbtiDetails, []);
   elements.changeButton.textContent = "Change";
   elements.changeButton.disabled = true;
   elements.select.disabled = true;
@@ -319,6 +438,8 @@ function setEmployerEmpty(elements: EmployerSignalsElements, message: string): v
   elements.matchConfidence.textContent = "";
   elements.sicCodes.textContent = "SIC codes: Not listed";
   elements.intensity.textContent = "Sector baseline: unavailable";
+  setSbtiBadge(elements.sbtiBadge, "Unavailable", "muted");
+  setSbtiDetails(elements.sbtiDetails, []);
   elements.changeButton.textContent = "Change";
   elements.changeButton.disabled = true;
   elements.select.disabled = true;
@@ -346,6 +467,7 @@ function setEmployerSignalsState(
     elements.matchConfidence.textContent = "";
     elements.sicCodes.textContent = "SIC codes: Not listed";
     elements.intensity.textContent = "Sector baseline: unavailable";
+    renderSbti(elements, null, false);
     elements.changeButton.textContent = "Set employer";
     elements.changeButton.disabled = false;
     elements.select.hidden = true;
@@ -356,6 +478,7 @@ function setEmployerSignalsState(
     elements.matchName.textContent = result.reason ?? "No match";
     elements.sicCodes.textContent = "SIC codes: Not listed";
     elements.intensity.textContent = "Sector baseline: unavailable";
+    renderSbti(elements, null, false);
     elements.changeButton.disabled = true;
     elements.select.hidden = true;
     return;
@@ -384,6 +507,8 @@ function setEmployerSignalsState(
   } else {
     elements.intensity.textContent = "Sector baseline: unavailable";
   }
+
+  renderSbti(elements, result.signals?.sbti, true);
 
   const hasCandidates = result.candidates.length > 0;
   elements.changeButton.disabled = !hasCandidates;

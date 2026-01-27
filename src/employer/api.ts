@@ -30,6 +30,13 @@ function buildCacheKey(name: string, hintLocation?: string): string {
   });
 }
 
+function buildSignalsCacheKey(companyNumber: string, companyName?: string): string {
+  return JSON.stringify({
+    companyNumber,
+    name: normalizeEmployerName(companyName ?? ""),
+  });
+}
+
 export function buildEmployerResolveUrl(
   name: string,
   hintLocation?: string,
@@ -46,11 +53,15 @@ export function buildEmployerResolveUrl(
 
 export function buildEmployerSignalsUrl(
   companyNumber: string,
+  companyName?: string,
   baseUrl: string = DEFAULT_EMPLOYER_API_BASE_URL,
 ): string {
   const url = new URL(baseUrl);
   url.pathname = "/api/employer/signals";
   url.searchParams.set("company_number", companyNumber);
+  if (companyName) {
+    url.searchParams.set("company_name", companyName);
+  }
   return url.toString();
 }
 
@@ -84,19 +95,21 @@ export async function fetchEmployerResolve(
 
 export async function fetchEmployerSignals(
   companyNumber: string,
+  companyName?: string,
   options: FetchOptions = {},
 ): Promise<EmployerSignalsResponse> {
-  const cached = signalsCache.get(companyNumber);
+  const cacheKey = buildSignalsCacheKey(companyNumber, companyName);
+  const cached = signalsCache.get(cacheKey);
   if (cached) {
     return cached;
   }
 
-  const url = buildEmployerSignalsUrl(companyNumber, options.baseUrl);
+  const url = buildEmployerSignalsUrl(companyNumber, companyName, options.baseUrl);
   const payload = await fetchJson<EmployerSignalsResponse>(
     url,
     options.fetchFn ?? fetch,
   );
-  signalsCache.set(companyNumber, payload);
+  signalsCache.set(cacheKey, payload);
   return payload;
 }
 
@@ -196,7 +209,8 @@ export async function resolveEmployerSignals(
     let signals: EmployerSignalsResponse | null = null;
 
     try {
-      signals = await fetchEmployerSignals(candidate.company_number, options);
+      const companyName = override?.companyName ?? candidate.title;
+      signals = await fetchEmployerSignals(candidate.company_number, companyName, options);
     } catch {
       signals = null;
     }

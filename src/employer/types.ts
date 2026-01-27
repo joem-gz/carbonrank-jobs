@@ -17,6 +17,24 @@ export type EmployerResolveResponse = {
   cached: boolean;
 };
 
+export type SbtiMatchStatus = "matched" | "no_match" | "low_confidence";
+
+export type SbtiMatchResult = {
+  match_status: SbtiMatchStatus;
+  match_confidence: number;
+  matched_company_name: string | null;
+  sbti_id: string | null;
+  near_term_status: string | null;
+  near_term_target_classification: string | null;
+  near_term_target_year: string | null;
+  net_zero_status: string | null;
+  net_zero_year: string | null;
+  ba15_status: string | null;
+  date_updated: string | null;
+  reason_for_extension_or_removal: string | null;
+  sources: string[];
+};
+
 export type EmployerSignalsResponse = {
   company_number: string;
   sic_codes: string[];
@@ -24,6 +42,7 @@ export type EmployerSignalsResponse = {
   sector_intensity_value: number | null;
   sector_intensity_sic_code: string | null;
   sector_description: string | null;
+  sbti: SbtiMatchResult | null;
   sources: string[];
   cached: boolean;
 };

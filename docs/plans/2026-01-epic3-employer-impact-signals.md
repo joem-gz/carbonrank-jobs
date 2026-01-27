@@ -95,8 +95,7 @@ Add an employer “Impact Signals” panel that complements commute CO2 with:
 
 ### C) SBTi dataset ingestion
 1. Decide ingestion method (v1):
-   - manual download of a public dataset snapshot into `server/data/sbti/` (tracked)
-   - OR a scheduled fetch job that updates a stored snapshot (requires legal/ToS review)
+   - manual download of a public dataset snapshot into `server/data/sbti/sbti_targets_uk_companies20260127.csv` (tracked)
 2. Implement matching:
    - normalized company name matching (plus aliases if available)
    - store match confidence + matched string

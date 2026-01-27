@@ -11,6 +11,7 @@ import {
   rankCompanies,
 } from "./companies_house";
 import { loadOnsIntensityMap, resolveOnsIntensity } from "./ons_intensity";
+import { loadSbtiSnapshot, matchSbtiCompany, SbtiMatchResult } from "./sbti_snapshot";
 import { createRateLimiter } from "./rate_limit";
 
 type ProxyResponse = {
@@ -32,6 +33,7 @@ type EmployerSignalsResponse = {
   sector_intensity_value: number | null;
   sector_intensity_sic_code: string | null;
   sector_description: string | null;
+  sbti: SbtiMatchResult | null;
   sources: string[];
   cached: boolean;
 };
@@ -94,6 +96,7 @@ const employerProfileCache = createLruCache<CompaniesHouseProfile>({
   maxSize: EMPLOYER_CACHE_MAX,
 });
 const onsIntensityMap = loadOnsIntensityMap();
+const sbtiSnapshot = loadSbtiSnapshot();
 const rateLimiter = createRateLimiter({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX,
@@ -261,6 +264,7 @@ async function handleEmployerSignals(
   }
 
   try {
+    const companyName = url.searchParams.get("company_name")?.trim() ?? "";
     const cachedProfile = employerProfileCache.get(companyNumber);
     let profile = cachedProfile;
     let cached = false;
@@ -279,6 +283,11 @@ async function handleEmployerSignals(
     if (intensity.value !== null) {
       sources.push("ons");
     }
+    const sbtiName = companyName || profile.company_name || "";
+    const sbtiMatch = matchSbtiCompany(sbtiName, sbtiSnapshot);
+    if (sbtiMatch.match_status !== "no_match") {
+      sources.push("sbti");
+    }
     const payload: EmployerSignalsResponse = {
       company_number: profile.company_number ?? companyNumber,
       sic_codes: sicCodes,
@@ -286,6 +295,7 @@ async function handleEmployerSignals(
       sector_intensity_value: intensity.value,
       sector_intensity_sic_code: intensity.matched_code ?? null,
       sector_description: intensity.description ?? null,
+      sbti: sbtiMatch,
       sources,
       cached,
     };

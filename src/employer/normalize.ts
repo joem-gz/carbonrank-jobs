@@ -1,6 +1,10 @@
 const LEGAL_SUFFIXES = new Set([
   "ltd",
   "limited",
+  "holdings",
+  "holding",
+  "group",
+  "groups",
   "plc",
   "llp",
   "lp",
@@ -19,6 +23,7 @@ const LEGAL_SUFFIXES = new Set([
 function normalizeFreeform(value: string): string {
   return value
     .toLowerCase()
+    .replace(/&/g, " and ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();

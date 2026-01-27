@@ -100,6 +100,7 @@ Response:
 Query parameters:
 
 - `company_number` — Companies House number (required)
+- `company_name` — optional Companies House title for SBTi matching
 
 Response:
 
@@ -111,6 +112,21 @@ Response:
   sector_intensity_value,
   sector_intensity_sic_code,
   sector_description,
+  sbti: {
+    match_status,
+    match_confidence,
+    matched_company_name,
+    sbti_id,
+    near_term_status,
+    near_term_target_classification,
+    near_term_target_year,
+    net_zero_status,
+    net_zero_year,
+    ba15_status,
+    date_updated,
+    reason_for_extension_or_removal,
+    sources
+  },
   sources,
   cached
 }

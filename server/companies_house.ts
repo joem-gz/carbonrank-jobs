@@ -3,6 +3,10 @@ const DEFAULT_BASE_URL = "https://api.company-information.service.gov.uk";
 const LEGAL_SUFFIXES = new Set([
   "ltd",
   "limited",
+  "holdings",
+  "holding",
+  "group",
+  "groups",
   "plc",
   "llp",
   "lp",
@@ -41,6 +45,7 @@ export type CompaniesHouseSearchResponse = {
 
 export type CompaniesHouseProfile = {
   company_number?: string;
+  company_name?: string;
   company_status?: string;
   sic_codes?: string[];
 };
@@ -153,13 +158,18 @@ export async function fetchCompaniesHouseProfile(
 function normalizeFreeformText(value: string): string {
   return value
     .toLowerCase()
+    .replace(/&/g, " and ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-export function normalizeCompanyName(name: string): string {
-  const cleaned = normalizeFreeformText(name);
+export function normalizeCompanyNameStrict(name: string): string {
+  return normalizeFreeformText(name);
+}
+
+export function normalizeCompanyNameLoose(name: string): string {
+  const cleaned = normalizeCompanyNameStrict(name);
   if (!cleaned) {
     return "";
   }
@@ -170,6 +180,10 @@ export function normalizeCompanyName(name: string): string {
   }
 
   return tokens.join(" ");
+}
+
+export function normalizeCompanyName(name: string): string {
+  return normalizeCompanyNameLoose(name);
 }
 
 function tokenize(value: string): string[] {
