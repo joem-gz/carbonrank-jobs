@@ -4,6 +4,12 @@ import { resolve } from "node:path";
 import { createLruCache } from "./cache";
 import { fetchAdzunaJobs, SearchQuery } from "./adzuna";
 import { createRateLimiter } from "./rate_limit";
+import { CommuteMode } from "../src/storage/settings";
+import {
+  createWidgetService,
+  parseWidgetPartners,
+  WidgetScoreRequest,
+} from "./widget_service";
 
 type ProxyResponse = {
   results: Awaited<ReturnType<typeof fetchAdzunaJobs>>["results"];
@@ -44,6 +50,21 @@ const RATE_LIMIT_WINDOW_MS = Number.parseInt(
   10,
 );
 const RATE_LIMIT_MAX = Number.parseInt(process.env.RATE_LIMIT_MAX ?? "60", 10);
+const WIDGET_PARTNERS = parseWidgetPartners(process.env.WIDGET_PARTNERS_JSON);
+const WIDGET_CACHE_MAX = Number.parseInt(process.env.WIDGET_CACHE_MAX ?? "500", 10);
+const WIDGET_RATE_LIMIT_WINDOW_MS = Number.parseInt(
+  process.env.WIDGET_RATE_LIMIT_WINDOW_MS ?? "60000",
+  10,
+);
+const WIDGET_RATE_LIMIT_MAX = Number.parseInt(
+  process.env.WIDGET_RATE_LIMIT_MAX ?? "120",
+  10,
+);
+const WIDGET_HOME_LAT = parseNumber(process.env.WIDGET_HOME_LAT) ?? 51.5074;
+const WIDGET_HOME_LON = parseNumber(process.env.WIDGET_HOME_LON) ?? -0.1278;
+const WIDGET_COMMUTE_MODE = parseCommuteMode(process.env.WIDGET_COMMUTE_MODE) ?? "car";
+const WIDGET_OFFICE_DAYS =
+  parseOfficeDays(process.env.WIDGET_OFFICE_DAYS) ?? 3;
 
 const cache = createLruCache<ProxyResponse>({
   ttlMs: CACHE_TTL_MS,
@@ -53,21 +74,43 @@ const rateLimiter = createRateLimiter({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX,
 });
+const widgetService = createWidgetService({
+  partners: WIDGET_PARTNERS,
+  cacheMax: WIDGET_CACHE_MAX,
+  defaultHome: { lat: WIDGET_HOME_LAT, lon: WIDGET_HOME_LON },
+  defaultCommuteMode: WIDGET_COMMUTE_MODE,
+  defaultOfficeDays: WIDGET_OFFICE_DAYS,
+  defaultRateLimit: {
+    windowMs: WIDGET_RATE_LIMIT_WINDOW_MS,
+    max: WIDGET_RATE_LIMIT_MAX,
+  },
+});
 
 function sendJson(
   response: import("node:http").ServerResponse,
   statusCode: number,
   payload: unknown,
+  headers: Record<string, string> = {},
 ): void {
   const body = JSON.stringify(payload, null, 2);
   response.writeHead(statusCode, {
     "Content-Type": "application/json",
     "Content-Length": Buffer.byteLength(body),
+    ...headers,
   });
   response.end(body);
 }
 
-function setCorsHeaders(response: import("node:http").ServerResponse): void {
+function sendEmpty(
+  response: import("node:http").ServerResponse,
+  statusCode: number,
+  headers: Record<string, string> = {},
+): void {
+  response.writeHead(statusCode, headers);
+  response.end();
+}
+
+function setSearchCorsHeaders(response: import("node:http").ServerResponse): void {
   response.setHeader("Access-Control-Allow-Origin", "*");
   response.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -86,6 +129,48 @@ function parseBoolean(value: string | null | undefined): boolean {
     return false;
   }
   return value === "1" || value.toLowerCase() === "true";
+}
+
+function parseCommuteMode(value: string | null | undefined): CommuteMode | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const normalized = value.toLowerCase();
+  if (
+    normalized === "car" ||
+    normalized === "bus" ||
+    normalized === "rail" ||
+    normalized === "walk" ||
+    normalized === "cycle"
+  ) {
+    return normalized as CommuteMode;
+  }
+  return undefined;
+}
+
+function parseOfficeDays(value: string | null | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) {
+    return undefined;
+  }
+  return Math.min(5, Math.max(0, parsed));
+}
+
+async function readJsonBody(
+  request: import("node:http").IncomingMessage,
+): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const body = Buffer.concat(chunks).toString("utf-8").trim();
+  if (!body) {
+    return {};
+  }
+  return JSON.parse(body);
 }
 
 function parseSearchQuery(url: URL): SearchQuery {
@@ -115,20 +200,55 @@ function buildCacheKey(query: SearchQuery): string {
 }
 
 const server = createServer(async (request, response) => {
-  setCorsHeaders(response);
+  const requestUrl = request.url ?? "/";
+  const host = request.headers.host ?? "localhost";
+  const url = new URL(requestUrl, `http://${host}`);
+
   if (request.method === "OPTIONS") {
-    response.writeHead(204);
-    response.end();
+    if (url.pathname === "/api/widget/score") {
+      const preflight = widgetService.handlePreflight(request.headers.origin);
+      sendEmpty(response, preflight.status, preflight.headers ?? {});
+      return;
+    }
+    setSearchCorsHeaders(response);
+    sendEmpty(response, 204);
     return;
   }
 
-  const requestUrl = request.url ?? "/";
-  const origin = request.headers.host ?? "localhost";
-  const url = new URL(requestUrl, `http://${origin}`);
+  if (url.pathname === "/api/widget/score") {
+    if (request.method !== "POST") {
+      sendJson(response, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    let payload: unknown;
+    try {
+      payload = await readJsonBody(request);
+    } catch {
+      sendJson(response, 400, { error: "Invalid JSON body" });
+      return;
+    }
+
+    const apiKey =
+      (request.headers["x-api-key"] as string | undefined) ?? null;
+    const result = widgetService.handleScoreRequest(
+      payload as WidgetScoreRequest,
+      {
+        apiKey,
+        origin: request.headers.origin ?? null,
+        ip: request.socket.remoteAddress ?? null,
+      },
+    );
+    sendJson(response, result.status, result.body, result.headers ?? {});
+    return;
+  }
+
   if (url.pathname !== "/api/jobs/search") {
     sendJson(response, 404, { error: "Not found" });
     return;
   }
+
+  setSearchCorsHeaders(response);
 
   if (request.method !== "GET") {
     sendJson(response, 405, { error: "Method not allowed" });

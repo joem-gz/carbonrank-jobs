@@ -64,6 +64,7 @@ type WidgetScoreRequest = {
   lat?: number;
   lon?: number;
   remoteFlag?: boolean;
+  jobUrl?: string;
 };
 
 type ResolvedLocation =
@@ -480,6 +481,7 @@ function buildJobPostingRequest(
   lat: number,
   lon: number,
   remoteFlag: boolean,
+  jobUrl: string,
 ): WidgetScoreRequest {
   return {
     title: jobPosting.title,
@@ -488,6 +490,7 @@ function buildJobPostingRequest(
     lat,
     lon,
     remoteFlag,
+    jobUrl,
   };
 }
 
@@ -512,12 +515,14 @@ function handleJobPosting(
     return;
   }
 
+  const jobUrl = normalizeText(doc.location?.href ?? "");
   const request = buildJobPostingRequest(
     jobPosting,
     resolved.locationName,
     resolved.lat,
     resolved.lon,
     remoteFlag,
+    jobUrl,
   );
   void requestScore(host, request, options, doc);
 }
@@ -619,6 +624,7 @@ function handleCard(
     lat: resolved.lat,
     lon: resolved.lon,
     remoteFlag: false,
+    jobUrl: linkInfo.href,
   };
 
   void requestScore(host, request, options, doc);
