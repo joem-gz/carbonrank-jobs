@@ -51,6 +51,8 @@ export type CompaniesHouseClientConfig = {
   baseUrl?: string;
 };
 
+export type OrgClassification = "employer" | "agency" | "unknown";
+
 export type EmployerCandidate = {
   company_number: string;
   title: string;
@@ -59,7 +61,35 @@ export type EmployerCandidate = {
   sic_codes: string[];
   score: number;
   reasons: string[];
+  org_classification: OrgClassification;
+  classification_reasons: string[];
 };
+
+const AGENCY_SIC_CODES = new Set(["78101", "78109", "78200", "78300"]);
+const AGENCY_SIC_PREFIX = "78";
+
+function normalizeSicCode(code: string): string {
+  return code.replace(/[^0-9]/g, "");
+}
+
+export function classifyOrganisationFromSic(
+  sicCodes: string[],
+): { org_classification: OrgClassification; classification_reasons: string[] } {
+  const normalized = sicCodes.map(normalizeSicCode).filter(Boolean);
+  if (normalized.length === 0) {
+    return { org_classification: "unknown", classification_reasons: [] };
+  }
+
+  const agencyCodes = normalized.filter(
+    (code) => code.startsWith(AGENCY_SIC_PREFIX) || AGENCY_SIC_CODES.has(code),
+  );
+  if (agencyCodes.length > 0) {
+    const reasons = Array.from(new Set(agencyCodes.map((code) => `sic_${code}`)));
+    return { org_classification: "agency", classification_reasons: reasons };
+  }
+
+  return { org_classification: "employer", classification_reasons: [] };
+}
 
 export function buildCompaniesHouseAuthHeader(apiKey: string): string {
   const token = Buffer.from(`${apiKey}:`).toString("base64");
@@ -229,14 +259,19 @@ export function rankCompanies(
 
       score = Math.min(1, Number(score.toFixed(3)));
 
+      const sicCodes = Array.isArray(item.sic_codes) ? item.sic_codes.filter(Boolean) : [];
+      const classification = classifyOrganisationFromSic(sicCodes);
+
       return {
         company_number: item.company_number ?? "",
         title,
         status: item.company_status ?? "unknown",
         address_snippet: addressSnippet,
-        sic_codes: Array.isArray(item.sic_codes) ? item.sic_codes.filter(Boolean) : [],
+        sic_codes: sicCodes,
         score,
         reasons,
+        org_classification: classification.org_classification,
+        classification_reasons: classification.classification_reasons,
       };
     })
     .filter((candidate) => Boolean(candidate.company_number))

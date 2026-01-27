@@ -134,6 +134,9 @@ export async function fetchEmployerStatus(
   try {
     const resolvePayload = await fetchEmployerResolve(name, hintLocation, options);
     const topCandidate = resolvePayload.candidates?.[0];
+    if (topCandidate?.org_classification === "agency") {
+      return "no_data";
+    }
     return classifyEmployerStatus(topCandidate?.score);
   } catch {
     return "error";

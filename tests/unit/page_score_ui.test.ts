@@ -58,12 +58,17 @@ describe("page score UI", () => {
       reason: "Missing location",
     });
     const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
+    const fetchEmployerResolve = vi.fn().mockResolvedValue({
+      candidates: [],
+      cached: false,
+    });
 
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
       fetchEmployerSignals,
+      fetchEmployerResolve,
       getEmployerOverride: async () => null,
       setEmployerOverride: async () => {},
       clearEmployerOverride: async () => {},
@@ -73,6 +78,7 @@ describe("page score UI", () => {
       getSettings: async () => settings,
       scoreLocation,
       fetchEmployerSignals,
+      fetchEmployerResolve,
       getEmployerOverride: async () => null,
       setEmployerOverride: async () => {},
       clearEmployerOverride: async () => {},
@@ -89,12 +95,17 @@ describe("page score UI", () => {
       reason: "Missing location",
     });
     const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
+    const fetchEmployerResolve = vi.fn().mockResolvedValue({
+      candidates: [],
+      cached: false,
+    });
 
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
       fetchEmployerSignals,
+      fetchEmployerResolve,
       getEmployerOverride: async () => null,
       setEmployerOverride: async () => {},
       clearEmployerOverride: async () => {},
@@ -120,12 +131,17 @@ describe("page score UI", () => {
       reason: "Missing location",
     });
     const fetchEmployerSignals = vi.fn().mockResolvedValue(employerResult);
+    const fetchEmployerResolve = vi.fn().mockResolvedValue({
+      candidates: [],
+      cached: false,
+    });
 
     await initPageScore({
       doc,
       getSettings: async () => settings,
       scoreLocation,
       fetchEmployerSignals,
+      fetchEmployerResolve,
       getEmployerOverride: async () => null,
       setEmployerOverride: async () => {},
       clearEmployerOverride: async () => {},
@@ -140,5 +156,69 @@ describe("page score UI", () => {
     );
     const intensity = doc.querySelector(".carbonrank-page-score__employer-intensity");
     expect(intensity?.textContent).toContain("Sector baseline: Low (0.42)");
+  });
+
+  it("shows employer not disclosed for agency posters", async () => {
+    const doc = new DOMParser().parseFromString(
+      `<!doctype html><body>
+        <script type="application/ld+json">
+          {
+            "@context": "https://schema.org",
+            "@type": "JobPosting",
+            "title": "Temp role",
+            "hiringOrganization": { "name": "Office Angels" },
+            "jobLocation": { "address": { "addressLocality": "Oxford" } }
+          }
+        </script>
+        <div>Office Angels is an employment agency acting on behalf of clients.</div>
+      </body>`,
+      "text/html",
+    );
+    const scoreLocation = vi.fn().mockResolvedValue({
+      status: "no_data",
+      reason: "Missing location",
+    });
+    const fetchEmployerSignals = vi.fn().mockResolvedValue({
+      status: "error",
+      candidates: [],
+    });
+    const fetchEmployerResolve = vi.fn().mockResolvedValue({
+      candidates: [
+        {
+          company_number: "001",
+          title: "Office Angels",
+          status: "active",
+          address_snippet: "London",
+          sic_codes: ["78109"],
+          score: 0.9,
+          reasons: ["exact_normalized_match"],
+          org_classification: "agency",
+          classification_reasons: ["sic_78109"],
+        },
+      ],
+      cached: false,
+    });
+
+    await initPageScore({
+      doc,
+      getSettings: async () => settings,
+      scoreLocation,
+      fetchEmployerSignals,
+      fetchEmployerResolve,
+      getEmployerOverride: async () => null,
+      setEmployerOverride: async () => {},
+      clearEmployerOverride: async () => {},
+      getEmployerOverrideForPoster: async () => null,
+      setEmployerOverrideForPoster: async () => {},
+      clearEmployerOverrideForPoster: async () => {},
+    });
+
+    const matchName = doc.querySelector(".carbonrank-page-score__employer-name");
+    expect(matchName?.textContent).toContain("Employer not disclosed");
+    const advertiser = doc.querySelector(
+      ".carbonrank-page-score__employer-advertiser",
+    );
+    expect(advertiser?.textContent).toContain("Office Angels");
+    expect(fetchEmployerSignals).not.toHaveBeenCalled();
   });
 });

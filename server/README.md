@@ -86,7 +86,9 @@ Response:
       address_snippet,
       sic_codes,
       score,
-      reasons
+      reasons,
+      org_classification,
+      classification_reasons
     }
   ],
   cached

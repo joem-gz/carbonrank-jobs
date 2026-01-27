@@ -54,8 +54,12 @@ function extractCompanyName(postedBy: string, logoAlt: string): string {
   return logoAlt;
 }
 
+export function findReedModal(doc: Document): Element | null {
+  return doc.querySelector(MODAL_SELECTOR);
+}
+
 export function extractReedModalJobPosting(doc: Document): JobPostingExtract | null {
-  const modal = doc.querySelector(MODAL_SELECTOR);
+  const modal = findReedModal(doc);
   if (!modal) {
     return null;
   }

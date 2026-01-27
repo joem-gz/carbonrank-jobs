@@ -1,3 +1,5 @@
+export type OrgClassification = "employer" | "agency" | "unknown";
+
 export type EmployerCandidate = {
   company_number: string;
   title: string;
@@ -6,6 +8,8 @@ export type EmployerCandidate = {
   sic_codes: string[];
   score: number;
   reasons: string[];
+  org_classification?: OrgClassification;
+  classification_reasons?: string[];
 };
 
 export type EmployerResolveResponse = {
@@ -26,6 +30,21 @@ export type EmployerSignalsResponse = {
 
 export type EmployerSignalStatus = "available" | "low_confidence" | "no_data" | "error";
 
+export type EmployerPosterInfo = {
+  name: string;
+  isAgency: boolean;
+  reasons: string[];
+  classification?: OrgClassification;
+  classificationReasons?: string[];
+};
+
+export type EmployerNameCandidate = {
+  name: string;
+  confidence: "medium" | "low" | "override";
+  source: "jsonld" | "text" | "override";
+  reasons: string[];
+};
+
 export type EmployerSignalsResult = {
   status: EmployerSignalStatus;
   candidates: EmployerCandidate[];
@@ -33,4 +52,6 @@ export type EmployerSignalsResult = {
   signals?: EmployerSignalsResponse | null;
   reason?: string;
   overrideApplied?: boolean;
+  poster?: EmployerPosterInfo;
+  employerCandidate?: EmployerNameCandidate | null;
 };

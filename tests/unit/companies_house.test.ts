@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildCompaniesHouseAuthHeader,
+  classifyOrganisationFromSic,
   fetchCompaniesHouseProfile,
   fetchCompaniesHouseSearch,
   normalizeCompanyName,
@@ -38,6 +39,12 @@ describe("Companies House helpers", () => {
     expect(candidates[0].reasons).toContain("exact_normalized_match");
     expect(candidates[0].reasons).toContain("location_hint_match");
     expect(candidates[0].score).toBeGreaterThan(candidates[1].score);
+  });
+
+  it("classifies recruitment agency SIC codes", () => {
+    expect(classifyOrganisationFromSic(["78109"]).org_classification).toBe("agency");
+    expect(classifyOrganisationFromSic(["62020"]).org_classification).toBe("employer");
+    expect(classifyOrganisationFromSic([]).org_classification).toBe("unknown");
   });
 
   it("fetches company search results with auth", async () => {

@@ -1,6 +1,7 @@
 export type EmployerSignalsElements = {
   root: HTMLDivElement;
   status: HTMLParagraphElement;
+  advertiser: HTMLParagraphElement;
   matchName: HTMLSpanElement;
   matchConfidence: HTMLSpanElement;
   changeButton: HTMLButtonElement;
@@ -33,6 +34,11 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
     "Employer signals",
   );
   const status = createElement(doc, "p", "carbonrank-page-score__employer-status");
+  const advertiser = createElement(
+    doc,
+    "p",
+    "carbonrank-page-score__employer-advertiser",
+  );
 
   const matchRow = createElement(doc, "div", "carbonrank-page-score__employer-match");
   const matchLabel = createElement(
@@ -82,11 +88,12 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
     "Sector baseline is industry average, not company footprint.",
   );
 
-  root.append(title, status, matchRow, select, sicCodes, intensity, note);
+  root.append(title, status, advertiser, matchRow, select, sicCodes, intensity, note);
 
   return {
     root,
     status,
+    advertiser: advertiser as HTMLParagraphElement,
     matchName: matchName as HTMLSpanElement,
     matchConfidence: matchConfidence as HTMLSpanElement,
     changeButton,

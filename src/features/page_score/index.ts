@@ -4,7 +4,10 @@ import {
   isRemoteJobPosting,
   JobPostingExtract,
 } from "../../extractors/jobposting_jsonld";
-import { extractReedModalJobPosting } from "../../sites/reed/job_details_modal";
+import {
+  extractReedModalJobPosting,
+  findReedModal,
+} from "../../sites/reed/job_details_modal";
 import { scoreLocation } from "../../scoring/location_scoring";
 import { ScoreBreakdown, ScoreResult } from "../../scoring/types";
 import { getSettings, Settings } from "../../storage/settings";
@@ -12,15 +15,32 @@ import { noopTelemetry, Telemetry } from "../../telemetry";
 import { ensureStyles } from "../../ui/badge";
 import { createEmployerSignalsPanel, EmployerSignalsElements } from "../../ui/employer_signals";
 import {
+  fetchEmployerResolve,
   formatEmployerStatusLabel,
   resolveEmployerSignals,
 } from "../../employer/api";
-import { EmployerCandidate, EmployerSignalsResult } from "../../employer/types";
+import {
+  buildPosterInfo,
+  applyAgencySicClassification,
+  classifyAgencyFromSicCodes,
+  detectAgencyDisclosure,
+  extractEmployerCandidateFromJobPosting,
+  extractEmployerCandidateFromText,
+  extractPosterName,
+} from "../../employer/agency";
+import {
+  EmployerCandidate,
+  EmployerResolveResponse,
+  EmployerSignalsResult,
+} from "../../employer/types";
 import {
   clearEmployerOverride,
   EmployerOverride as StoredEmployerOverride,
   getEmployerOverride,
+  getEmployerOverrideForPoster,
   setEmployerOverride,
+  setEmployerOverrideForPoster,
+  clearEmployerOverrideForPoster,
 } from "../../storage/employer_overrides";
 import pageScoreStyles from "./page_score.css";
 
@@ -51,15 +71,36 @@ export type PageScoreDependencies = {
     hintLocation: string,
     override?: StoredEmployerOverride | null,
   ) => Promise<EmployerSignalsResult>;
+  fetchEmployerResolve?: (
+    name: string,
+    hintLocation: string,
+  ) => Promise<EmployerResolveResponse>;
   getEmployerOverride?: (name: string) => Promise<StoredEmployerOverride | null>;
   setEmployerOverride?: (name: string, override: StoredEmployerOverride) => Promise<void>;
   clearEmployerOverride?: (name: string) => Promise<void>;
+  getEmployerOverrideForPoster?: (
+    posterName: string,
+    siteDomain: string,
+    jobId?: string,
+  ) => Promise<StoredEmployerOverride | null>;
+  setEmployerOverrideForPoster?: (
+    posterName: string,
+    siteDomain: string,
+    override: StoredEmployerOverride,
+    jobId?: string,
+  ) => Promise<void>;
+  clearEmployerOverrideForPoster?: (
+    posterName: string,
+    siteDomain: string,
+    jobId?: string,
+  ) => Promise<void>;
 };
 
 type JobPostingContext = {
   jobPosting: JobPostingExtract;
   locationText: string;
   isRemote: boolean;
+  posterScope: (ParentNode & Node) | null;
 };
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
@@ -105,6 +146,9 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
         root: employerRoot,
         status: employerRoot.querySelector(
           ".carbonrank-page-score__employer-status",
+        ) as HTMLParagraphElement,
+        advertiser: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-advertiser",
         ) as HTMLParagraphElement,
         matchName: employerRoot.querySelector(
           ".carbonrank-page-score__employer-name",
@@ -257,10 +301,12 @@ function populateEmployerOptions(
 
 function setEmployerLoading(elements: EmployerSignalsElements): void {
   elements.status.textContent = "Employer signals: loading";
+  elements.advertiser.textContent = "";
   elements.matchName.textContent = "Loading…";
   elements.matchConfidence.textContent = "";
   elements.sicCodes.textContent = "SIC codes: —";
   elements.intensity.textContent = "Sector baseline: —";
+  elements.changeButton.textContent = "Change";
   elements.changeButton.disabled = true;
   elements.select.disabled = true;
   elements.select.hidden = true;
@@ -268,10 +314,12 @@ function setEmployerLoading(elements: EmployerSignalsElements): void {
 
 function setEmployerEmpty(elements: EmployerSignalsElements, message: string): void {
   elements.status.textContent = "Employer signals: no data";
+  elements.advertiser.textContent = "";
   elements.matchName.textContent = message;
   elements.matchConfidence.textContent = "";
   elements.sicCodes.textContent = "SIC codes: Not listed";
   elements.intensity.textContent = "Sector baseline: unavailable";
+  elements.changeButton.textContent = "Change";
   elements.changeButton.disabled = true;
   elements.select.disabled = true;
   elements.select.hidden = true;
@@ -284,6 +332,25 @@ function setEmployerSignalsState(
 ): void {
   elements.status.textContent = formatEmployerStatusText(result);
   elements.matchConfidence.textContent = formatEmployerConfidence(result);
+  elements.changeButton.textContent = "Change";
+
+  if (result.poster?.isAgency) {
+    elements.advertiser.textContent = `Advertiser: ${result.poster.name}`;
+  } else {
+    elements.advertiser.textContent = "";
+  }
+
+  if (result.poster?.isAgency && !result.selectedCandidate) {
+    elements.matchName.textContent =
+      result.reason ?? "Employer not disclosed (advert posted by recruitment agency)";
+    elements.matchConfidence.textContent = "";
+    elements.sicCodes.textContent = "SIC codes: Not listed";
+    elements.intensity.textContent = "Sector baseline: unavailable";
+    elements.changeButton.textContent = "Set employer";
+    elements.changeButton.disabled = false;
+    elements.select.hidden = true;
+    return;
+  }
 
   if (!result.selectedCandidate) {
     elements.matchName.textContent = result.reason ?? "No match";
@@ -296,14 +363,18 @@ function setEmployerSignalsState(
 
   elements.matchName.textContent = result.selectedCandidate.title || "Unknown";
 
-  const sicCodes = result.signals?.sic_codes ?? result.selectedCandidate.sic_codes ?? [];
+  const showSignals = result.status === "available" || !result.poster?.isAgency;
+  const sicCodes = showSignals
+    ? result.signals?.sic_codes ?? result.selectedCandidate.sic_codes ?? []
+    : [];
   elements.sicCodes.textContent = `SIC codes: ${formatSicCodes(
     sicCodes,
-    result.signals?.sector_description,
-    result.signals?.sector_intensity_sic_code,
+    showSignals ? result.signals?.sector_description : null,
+    showSignals ? result.signals?.sector_intensity_sic_code : null,
   )}`;
 
   if (
+    showSignals &&
     result.signals?.sector_intensity_value !== null &&
     result.signals?.sector_intensity_value !== undefined
   ) {
@@ -412,19 +483,44 @@ function buildContextKey(context: JobPostingContext): string {
   ].join("|");
 }
 
+function readScopeText(scope: ParentNode & Node, doc: Document): string {
+  const container = scope instanceof Element ? scope : doc.body;
+  if (!container) {
+    return "";
+  }
+  const clone = container.cloneNode(true) as Element;
+  clone
+    .querySelectorAll(`#${ROOT_ID}, [data-carbonrank-badge]`)
+    .forEach((el) => el.remove());
+  return clone.textContent ?? "";
+}
+
+function extractJobIdFromUrl(url: URL): string | undefined {
+  const matches = url.pathname.match(/\d{5,}/g);
+  if (!matches || matches.length === 0) {
+    return undefined;
+  }
+  return matches[matches.length - 1];
+}
+
 function resolveJobPostingContext(doc: Document): JobPostingContext | null {
+  const modalPosting = extractReedModalJobPosting(doc);
+  if (modalPosting) {
+    const locationText = formatJobLocation(modalPosting);
+    return {
+      jobPosting: modalPosting,
+      locationText,
+      isRemote: false,
+      posterScope: findReedModal(doc) ?? doc.body ?? doc,
+    };
+  }
+
   const postings = extractJobPostingJsonLd(doc);
   if (postings.length > 0) {
     const jobPosting = pickJobPosting(postings);
     const isRemote = isRemoteJobPosting(jobPosting);
     const locationText = isRemote ? "Remote" : formatJobLocation(jobPosting);
-    return { jobPosting, locationText, isRemote };
-  }
-
-  const modalPosting = extractReedModalJobPosting(doc);
-  if (modalPosting) {
-    const locationText = formatJobLocation(modalPosting);
-    return { jobPosting: modalPosting, locationText, isRemote: false };
+    return { jobPosting, locationText, isRemote, posterScope: doc.body ?? doc };
   }
 
   return null;
@@ -439,9 +535,18 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
     deps.fetchEmployerSignals ??
     ((name, hintLocation, override) =>
       resolveEmployerSignals(name, hintLocation, override ?? undefined));
+  const fetchEmployerResolveFn =
+    deps.fetchEmployerResolve ??
+    ((name, hintLocation) => fetchEmployerResolve(name, hintLocation));
   const getEmployerOverrideFn = deps.getEmployerOverride ?? getEmployerOverride;
   const setEmployerOverrideFn = deps.setEmployerOverride ?? setEmployerOverride;
   const clearEmployerOverrideFn = deps.clearEmployerOverride ?? clearEmployerOverride;
+  const getEmployerOverrideForPosterFn =
+    deps.getEmployerOverrideForPoster ?? getEmployerOverrideForPoster;
+  const setEmployerOverrideForPosterFn =
+    deps.setEmployerOverrideForPoster ?? setEmployerOverrideForPoster;
+  const clearEmployerOverrideForPosterFn =
+    deps.clearEmployerOverrideForPoster ?? clearEmployerOverrideForPoster;
 
   let elements: PageScoreElements | null = null;
   let currentContext: JobPostingContext | null = null;
@@ -450,7 +555,11 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
   let employerRequestId = 0;
   let refreshQueued = false;
   let currentEmployerName = "";
+  let currentEmployerSearchName = "";
   let currentEmployerCandidates: EmployerCandidate[] = [];
+  let currentPosterContext: { name: string; domain: string; jobId?: string } | null = null;
+  let currentPosterIsAgency = false;
+  let currentOverrideScope: "employer" | "poster" = "employer";
 
   const ensureElements = (): PageScoreElements => {
     ensureStyles(pageScoreStyles, doc, STYLE_ID);
@@ -487,13 +596,26 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
     if (!currentContext) {
       return;
     }
-    const activeElements = ensureElements();
-    const employerName = currentContext.jobPosting.hiringOrganizationName;
+    const employerName = extractPosterName(
+      currentContext.posterScope ?? doc,
+      currentContext.jobPosting.hiringOrganizationName,
+    );
     const hintLocation = currentContext.locationText;
     const requestId = ++employerRequestId;
 
+    const posterText = readScopeText(
+      currentContext.posterScope ?? doc,
+      doc,
+    );
+
+    const activeElements = ensureElements();
+
     currentEmployerName = employerName;
+    currentEmployerSearchName = "";
     currentEmployerCandidates = [];
+    currentPosterContext = null;
+    currentPosterIsAgency = false;
+    currentOverrideScope = "employer";
 
     if (!employerName) {
       setEmployerEmpty(activeElements.employer, "Employer not listed");
@@ -501,23 +623,137 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
     }
 
     setEmployerLoading(activeElements.employer);
-
-    const override = await getEmployerOverrideFn(employerName);
-    let result: EmployerSignalsResult;
+    const disclosure = detectAgencyDisclosure(posterText);
+    let posterResolve: EmployerResolveResponse | null = null;
     try {
-      result = await fetchEmployerSignalsFn(employerName, hintLocation, override);
+      posterResolve = await fetchEmployerResolveFn(employerName, hintLocation);
     } catch (error) {
-      console.error("[EmployerSignals] Failed to load", error);
-      result = {
-        status: "error",
-        candidates: [],
-        reason: "Unable to load employer signals",
-      };
+      console.warn("[EmployerSignals] Poster resolve failed", error);
+      posterResolve = null;
     }
+
+    const posterCandidate = posterResolve?.candidates?.[0];
+    let posterInfo = buildPosterInfo(employerName, disclosure, posterCandidate);
+    currentPosterIsAgency = posterInfo.isAgency;
+
+    const pageUrl = new URL(doc.URL || window.location.href);
+    const jobId = extractJobIdFromUrl(pageUrl);
+    currentPosterContext = {
+      name: employerName,
+      domain: pageUrl.hostname,
+      jobId,
+    };
+
+    const employerCandidate =
+      extractEmployerCandidateFromJobPosting(currentContext.jobPosting, employerName) ??
+      extractEmployerCandidateFromText(posterText, employerName);
+
+    let override = posterInfo.isAgency
+      ? await getEmployerOverrideForPosterFn(employerName, pageUrl.hostname, jobId)
+      : await getEmployerOverrideFn(employerName);
+    currentOverrideScope = posterInfo.isAgency ? "poster" : "employer";
+
+    let result: EmployerSignalsResult;
+    if (posterInfo.isAgency) {
+      if (!employerCandidate && !override) {
+        result = {
+          status: "no_data",
+          candidates: [],
+          reason: "Employer not disclosed (advert posted by recruitment agency)",
+          poster: posterInfo,
+          employerCandidate,
+        };
+        if (requestId !== employerRequestId) {
+          return;
+        }
+        setEmployerSignalsState(activeElements.employer, result, override);
+        return;
+      }
+
+      const targetName =
+        override?.companyName || employerCandidate?.name || employerName;
+      currentEmployerSearchName = targetName;
+      try {
+        result = await fetchEmployerSignalsFn(targetName, hintLocation, override);
+      } catch (error) {
+        console.error("[EmployerSignals] Failed to load", error);
+        result = {
+          status: "error",
+          candidates: [],
+          reason: "Unable to load employer signals",
+        };
+      }
+
+      if (result.status !== "available") {
+        result.signals = null;
+      }
+    } else {
+      currentEmployerSearchName = employerName;
+      try {
+        result = await fetchEmployerSignalsFn(employerName, hintLocation, override);
+      } catch (error) {
+        console.error("[EmployerSignals] Failed to load", error);
+        result = {
+          status: "error",
+          candidates: [],
+          reason: "Unable to load employer signals",
+        };
+      }
+
+      const sicCodes = result.signals?.sic_codes ?? result.selectedCandidate?.sic_codes ?? [];
+      if (classifyAgencyFromSicCodes(sicCodes).isAgency) {
+        posterInfo = applyAgencySicClassification(posterInfo, sicCodes);
+        currentPosterIsAgency = true;
+        if (currentOverrideScope !== "poster") {
+          override = await getEmployerOverrideForPosterFn(
+            employerName,
+            pageUrl.hostname,
+            jobId,
+          );
+          currentOverrideScope = "poster";
+        }
+
+        if (!employerCandidate && !override) {
+          result = {
+            status: "no_data",
+            candidates: [],
+            reason: "Employer not disclosed (advert posted by recruitment agency)",
+            poster: posterInfo,
+            employerCandidate,
+          };
+          if (requestId !== employerRequestId) {
+            return;
+          }
+          setEmployerSignalsState(activeElements.employer, result, override);
+          return;
+        }
+
+        const targetName =
+          override?.companyName || employerCandidate?.name || employerName;
+        currentEmployerSearchName = targetName;
+        try {
+          result = await fetchEmployerSignalsFn(targetName, hintLocation, override);
+        } catch (error) {
+          console.error("[EmployerSignals] Failed to load", error);
+          result = {
+            status: "error",
+            candidates: [],
+            reason: "Unable to load employer signals",
+          };
+        }
+
+        if (result.status !== "available") {
+          result.signals = null;
+        }
+      }
+    }
+
     if (requestId !== employerRequestId) {
       return;
     }
 
+    result.poster = posterInfo;
+    result.employerCandidate = employerCandidate;
     currentEmployerCandidates = result.candidates;
     setEmployerSignalsState(activeElements.employer, result, override);
   };
@@ -558,22 +794,81 @@ export async function initPageScore(deps: PageScoreDependencies = {}): Promise<v
 
     if (!activeElements.root.dataset.employerControls) {
       activeElements.root.dataset.employerControls = "true";
-      activeElements.employer.changeButton.addEventListener("click", () => {
+      const handleEmployerChange = async () => {
         if (activeElements.employer.changeButton.disabled) {
           return;
         }
+
+        if (currentPosterIsAgency && currentEmployerCandidates.length === 0) {
+          if (!window.prompt) {
+            return;
+          }
+          const entered = window.prompt("Enter employer name");
+          if (!entered) {
+            return;
+          }
+          const trimmed = entered.trim();
+          if (!trimmed) {
+            return;
+          }
+          currentEmployerSearchName = trimmed;
+          try {
+            const resolved = await fetchEmployerResolveFn(
+              trimmed,
+              currentContext?.locationText ?? "",
+            );
+            currentEmployerCandidates = resolved.candidates ?? [];
+            populateEmployerOptions(
+              activeElements.employer.select,
+              currentEmployerCandidates,
+            );
+            activeElements.employer.select.disabled =
+              currentEmployerCandidates.length === 0;
+          } catch (error) {
+            console.error("[EmployerSignals] Employer lookup failed", error);
+            return;
+          }
+        }
+
         activeElements.employer.select.hidden =
           !activeElements.employer.select.hidden;
         if (!activeElements.employer.select.hidden) {
           activeElements.employer.select.focus();
         }
+      };
+
+      activeElements.employer.changeButton.addEventListener("click", () => {
+        void handleEmployerChange();
       });
       activeElements.employer.select.addEventListener("change", async () => {
         if (!currentEmployerName) {
           return;
         }
         const selectedNumber = activeElements.employer.select.value;
-        if (!selectedNumber) {
+        if (currentOverrideScope === "poster" && currentPosterContext) {
+          if (!selectedNumber) {
+            await clearEmployerOverrideForPosterFn(
+              currentPosterContext.name,
+              currentPosterContext.domain,
+              currentPosterContext.jobId,
+            );
+          } else {
+            const candidate = currentEmployerCandidates.find(
+              (item) => item.company_number === selectedNumber,
+            );
+            await setEmployerOverrideForPosterFn(
+              currentPosterContext.name,
+              currentPosterContext.domain,
+              {
+                companyNumber: selectedNumber,
+                companyName:
+                  candidate?.title || currentEmployerSearchName || currentEmployerName,
+                updatedAt: Date.now(),
+              },
+              currentPosterContext.jobId,
+            );
+          }
+        } else if (!selectedNumber) {
           await clearEmployerOverrideFn(currentEmployerName);
         } else {
           const candidate = currentEmployerCandidates.find(

@@ -9,6 +9,7 @@ export type EmployerOverride = {
 type EmployerOverrideStore = {
   byName: Record<string, EmployerOverride>;
   byDomain: Record<string, EmployerOverride>;
+  byPoster: Record<string, EmployerOverride>;
 };
 
 const OVERRIDES_KEY = "carbonrankEmployerOverrides";
@@ -19,9 +20,10 @@ function ensureStore(value: unknown): EmployerOverrideStore {
     return {
       byName: store.byName ?? {},
       byDomain: store.byDomain ?? {},
+      byPoster: store.byPoster ?? {},
     };
   }
-  return { byName: {}, byDomain: {} };
+  return { byName: {}, byDomain: {}, byPoster: {} };
 }
 
 async function loadStore(): Promise<EmployerOverrideStore> {
@@ -54,6 +56,27 @@ export async function getEmployerOverride(
   return null;
 }
 
+function buildPosterKey(
+  posterName: string,
+  siteDomain: string,
+  jobId?: string,
+): string {
+  const domainKey = normalizeEmployerDomain(siteDomain);
+  const posterKey = normalizeEmployerName(posterName);
+  const jobKey = jobId ? jobId.trim().toLowerCase() : "";
+  return [domainKey, posterKey, jobKey].filter(Boolean).join("|");
+}
+
+export async function getEmployerOverrideForPoster(
+  posterName: string,
+  siteDomain: string,
+  jobId?: string,
+): Promise<EmployerOverride | null> {
+  const store = await loadStore();
+  const key = buildPosterKey(posterName, siteDomain, jobId);
+  return key && store.byPoster[key] ? store.byPoster[key] : null;
+}
+
 export async function setEmployerOverride(
   name: string,
   override: EmployerOverride,
@@ -73,6 +96,20 @@ export async function setEmployerOverride(
   await saveStore(store);
 }
 
+export async function setEmployerOverrideForPoster(
+  posterName: string,
+  siteDomain: string,
+  override: EmployerOverride,
+  jobId?: string,
+): Promise<void> {
+  const store = await loadStore();
+  const key = buildPosterKey(posterName, siteDomain, jobId);
+  if (key) {
+    store.byPoster[key] = override;
+  }
+  await saveStore(store);
+}
+
 export async function clearEmployerOverride(name: string, domain?: string): Promise<void> {
   const store = await loadStore();
   const nameKey = normalizeEmployerName(name);
@@ -84,6 +121,19 @@ export async function clearEmployerOverride(name: string, domain?: string): Prom
     if (domainKey) {
       delete store.byDomain[domainKey];
     }
+  }
+  await saveStore(store);
+}
+
+export async function clearEmployerOverrideForPoster(
+  posterName: string,
+  siteDomain: string,
+  jobId?: string,
+): Promise<void> {
+  const store = await loadStore();
+  const key = buildPosterKey(posterName, siteDomain, jobId);
+  if (key) {
+    delete store.byPoster[key];
   }
   await saveStore(store);
 }
