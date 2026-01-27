@@ -65,3 +65,64 @@ Responses are normalised to:
   cached
 }
 ```
+
+## Widget API
+
+`POST /api/widget/score`
+
+Headers:
+
+- `X-API-Key` — partner API key
+- `Origin` — partner site origin
+
+Request payload:
+
+```
+{
+  "title": "Job title",
+  "employer": "Company",
+  "locationName": "London",
+  "lat": 51.5,
+  "lon": -0.12,
+  "remoteFlag": false,
+  "jobUrl": "https://partner.test/jobs/123"
+}
+```
+
+Response payload:
+
+```
+{
+  "badgeText": "123 kgCO2e/yr",
+  "status": "ok",
+  "score": 123,
+  "breakdown": {
+    "distanceKm": 12.3,
+    "officeDaysPerWeek": 3,
+    "annualKm": 3394,
+    "emissionFactorKgPerKm": 0.171,
+    "annualKgCO2e": 581
+  },
+  "reason": ""
+}
+```
+
+### Configuration
+
+Configure partner keys and origins via `WIDGET_PARTNERS_JSON`:
+
+```
+WIDGET_PARTNERS_JSON=[{"key":"partner-key","name":"Partner","origins":["https://partner.test"],"cacheTtlDays":3}]
+```
+
+Optional defaults:
+
+```
+WIDGET_HOME_LAT=51.5074
+WIDGET_HOME_LON=-0.1278
+WIDGET_COMMUTE_MODE=car
+WIDGET_OFFICE_DAYS=3
+WIDGET_CACHE_MAX=500
+WIDGET_RATE_LIMIT_WINDOW_MS=60000
+WIDGET_RATE_LIMIT_MAX=120
+```

@@ -31,9 +31,9 @@ Won’t change:
 - Validate + handoff
 
 ## Validation (commands)
-- `npm test`
-- `npm run build`
-- `npm run test:e2e`
+- `npm test` (pass)
+- `npm run build` (pass)
+- `npm run test:e2e` (pass; required escalated permissions)
 
 ## Risks / edge cases
 - Default scoring uses configurable baseline home coordinates
