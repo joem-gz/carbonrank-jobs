@@ -1,4 +1,4 @@
-# Handoff: agent/sector-intensity
+# Handoff: fix-sector-intensity-display
 
 ## Summary
 - Load ONS intensity map with a fallback path so values resolve reliably.
