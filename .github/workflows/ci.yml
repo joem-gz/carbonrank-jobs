@@ -4,6 +4,8 @@ on:
   push:
     branches: ["**"]
   pull_request:
+  schedule:
+    - cron: "0 3 * * *"
 
 jobs:
   test:
@@ -33,7 +35,14 @@ jobs:
       - run: npm run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
-      - name: E2E tests
-        run: xvfb-run --auto-servernum -- npm run test:e2e
+      - name: E2E smoke test
+        if: github.event_name != 'schedule'
+        run: xvfb-run --auto-servernum -- npm run test:e2e -- tests/e2e/annotates_cards.spec.ts
+
+      - name: E2E nightly (headless)
+        if: github.event_name == 'schedule'
+        run: npm run test:e2e
+        env:
+          PLAYWRIGHT_HEADLESS: "1"

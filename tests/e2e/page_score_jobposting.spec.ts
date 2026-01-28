@@ -6,6 +6,7 @@ const fixtureHtml = readFileSync(
   resolve("tests/fixtures/jobposting_page.html"),
   "utf-8",
 );
+const headless = process.env.PLAYWRIGHT_HEADLESS === "1";
 
 test("shows page score UI for JobPosting JSON-LD", async () => {
   test.setTimeout(60_000);
@@ -15,7 +16,7 @@ test("shows page score UI for JobPosting JSON-LD", async () => {
   mkdirSync(crashpadDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
+    headless,
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
