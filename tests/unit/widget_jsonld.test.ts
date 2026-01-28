@@ -30,13 +30,12 @@ describe("widget JobPosting JSON-LD", () => {
 
   it("requests scores with geo coordinates when available", async () => {
     const doc = loadFixture("../fixtures/widget_jobposting_onsite.html");
-    const fetchMock = vi.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(
-      async () =>
-        ({
-          ok: true,
-          json: async () => ({ status: "ok", score: 210 }),
-        }) as Response,
-    );
+    const fetchMock = vi.fn<
+      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
+    >(async () => ({
+      ok: true,
+      json: async () => ({ status: "ok", score: 210 }),
+    }) as Response);
     vi.stubGlobal("fetch", fetchMock);
 
     init({ doc, apiBaseUrl: "https://example.test/api/widget/score" });
