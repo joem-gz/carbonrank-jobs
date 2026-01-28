@@ -114,7 +114,7 @@ Requirements:
 
 ---
 
-## Milestones & checkpoints (must stop for human review)
+## Milestones & checkpoints (must stop for human review where noted)
 
 **CP5.1 — Brand constants + string sweep**
 Implement `brand.ts`; replace all visible “CarbonRank” → **IsThisJobGreen?**
@@ -122,19 +122,19 @@ Implement `brand.ts`; replace all visible “CarbonRank” → **IsThisJobGreen?
 
 **CP5.2 — Attribution everywhere**
 Add “Powered by IsThisJobGreen?” with working links + fallback.
-*STOP*: link/CSP verification.
+
 
 **CP5.3 — Help page (web + fallback)**
 Create pages with how-to, caveats, sources.
-*STOP*: wording/claims review.
+*Commit* this milestone before proceeding.
 
 **CP5.4 — **?** Tooltips**
 Add accessible tooltips with shared copy.
-*STOP*: screenshots + keyboard check.
+*Commit* this milestone before proceeding.
 
 **CP5.5 — Release readiness**
 Update docs/readmes; final QA.
-*STOP*: checklist + test results.
+*Commit* this milestone then *STOP* for human review.
 
 ---
 
