@@ -1,0 +1,13 @@
+sic_code,intensity,description
+01,0.45,"Agriculture, forestry and fishing"
+0111,0.52,Growing of cereals (except rice)
+10,0.65,Manufacture of food products
+1011,0.72,Processing and preserving of meat
+20,1.8,Manufacture of chemicals and chemical products
+2011,2.1,Manufacture of industrial gases
+35,3.5,"Electricity, gas, steam and air conditioning supply"
+3511,4.0,Production of electricity
+49,2.2,Land transport and transport via pipelines
+4910,2.4,Passenger rail transport
+62,0.3,Computer programming and consultancy
+6202,0.25,Information technology consultancy activities

@@ -79,4 +79,12 @@ describe("reed adapter", () => {
     expect(parsed.locationText).toBe("Leeds LS1 2AA");
     expect(parsed.jobUrl).toBe("https://www.reed.co.uk/jobs/qa-engineer/222");
   });
+
+  it("parses location from metadata list items", () => {
+    const doc = loadFixture("../fixtures/reed_search_results_metadata_location.html");
+    const card = findCards(doc)[0];
+    const parsed = parseCard(card);
+
+    expect(parsed.locationText).toBe("Leeds, West Yorkshire");
+  });
 });

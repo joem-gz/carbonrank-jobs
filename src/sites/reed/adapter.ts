@@ -31,6 +31,7 @@ export const selectors = {
   ],
   locationSelectors: [
     "li[data-qa=\"job-card-location\"]",
+    "[data-qa=\"job-metadata-location\"]",
     "[data-qa=\"location\"]",
     "[data-testid=\"location\"]",
     ".job-location",

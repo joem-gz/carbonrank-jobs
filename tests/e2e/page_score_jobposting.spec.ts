@@ -44,6 +44,42 @@ test("shows page score UI for JobPosting JSON-LD", async () => {
     });
   });
 
+  await context.route("http://localhost:8787/api/employer/resolve*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        candidates: [
+          {
+            company_number: "001",
+            title: "Acme Ltd",
+            status: "active",
+            address_snippet: "London",
+            sic_codes: ["62020"],
+            score: 0.92,
+            reasons: ["exact_normalized_match"],
+          },
+        ],
+        cached: false,
+      }),
+    });
+  });
+
+  await context.route("http://localhost:8787/api/employer/signals*", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        company_number: "001",
+        sic_codes: ["62020"],
+        sector_intensity_band: "low",
+        sector_intensity_value: 0.42,
+        sources: ["companies_house", "ons"],
+        cached: false,
+      }),
+    });
+  });
+
   const page = await context.newPage();
   await page.goto("https://example.com/job?id=1", { waitUntil: "domcontentloaded" });
 
@@ -71,6 +107,9 @@ test("shows page score UI for JobPosting JSON-LD", async () => {
 
   const scoreValue = page.locator(".carbonrank-page-score__score-value");
   await expect(scoreValue).toContainText("kgCO2e/yr");
+
+  const employerStatus = page.locator(".carbonrank-page-score__employer-status");
+  await expect(employerStatus).toContainText("Employer signals");
 
   await context.close();
 });

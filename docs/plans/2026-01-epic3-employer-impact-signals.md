@@ -55,21 +55,47 @@ Add an employer “Impact Signals” panel that complements commute CO2 with:
    - company profile (TTL 30 days)
 
 ### B) ONS sector intensity baseline
-1. Add a build-time data import:
-   - source file checked into `server/data/ons/` (or downloaded in CI if stable URL)
-   - transform into JSON map keyed by SIC code prefix rules
-2. Define mapping rule (draft):
-   - try exact SIC4/5
-   - fallback to SIC2 prefix group
-   - else “unknown”
-3. Produce “banding” function:
-   - convert numeric intensity into: Low / Medium / High (quantiles over all industries)
-   - store band thresholds in the generated JSON
+## Replace Epic 3 section “B) ONS sector intensity baseline” with this
+
+### B) ONS sector intensity baseline (revised)
+
+1. Source + storage:
+   - Use the ONS “UK environmental accounts: Atmospheric emissions – GHG emissions intensity” Excel snapshot.
+   - Store the downloaded `.xlsx` at `server/data/ons/04atmosphericemissionsghgintensity.xlsx` (pinned snapshot), and generate a derived JSON map committed to repo: `server/data/ons/ons_intensity_map.json`.
+
+2. Table + year selection (deterministic):
+   - Extract from sheet **“GHG intensity”**, **Table 1b** (anchor cell **Y7**).
+   - Read **SIC labels** from the header row (starting **Z9**; **Y9** is the label cell), and **industry names** from the next row (starting **Z10**).
+   - Year values are in **column Y** from row 11 downward; select the **latest year row present** and use that row for all intensity values.
+
+3. Keying & runtime lookup rule
+   - Build a mapping keyed primarily to **SIC group (3-digit)**, to match Companies House SIC5 → **first 3 digits** (`sic3`) resolution.
+   - Also generate a **SIC division (2-digit)** fallback map (`sic2`) for cases where only a division-level match is possible.
+   - Runtime resolution: try `sic3` first → else `sic2` → else “unknown”.
+
+4. Parsing SIC header labels (including combined cells)
+   - Use the **formatted cell text** from Excel (not raw numeric) to avoid float/formatting issues.
+   - Expand combined labels into deterministic keys, supporting patterns seen in the sheet:
+     * ranges (e.g., `23.1-4`, `11.01-6`)
+     * conjunctions (e.g., `… & 12`)
+     * plus lists (e.g., `20.11+20.13+20.15`, `30.2+4+9`)
+     * division-only labels with exclusions (e.g., `33 (not 33.15-16)`): treat as **division key only** (`"33"`) and do not attempt to infer missing group keys.
+
+5. Collisions & conservatism
+   - When a generated key would be assigned multiple intensities (due to combined labels / overlaps), resolve deterministically using **max intensity** (conservative).
+   - Record collisions in the generated JSON (for audit/review).
+
+6. Band thresholds + metadata
+   - Compute Low/Medium/High bands from quantiles over all extracted intensity values (e.g., 33rd and 66th percentiles) and store thresholds in JSON.
+   - Store metadata: source name, file name, sheet/table anchor, selected year, generated timestamp, collision policy.
+
+7. Tests
+
+   - Unit tests for: label expansion cases above, year-row detection, `sic3` then `sic2` lookup, and collision policy behaviour.
 
 ### C) SBTi dataset ingestion
 1. Decide ingestion method (v1):
-   - manual download of a public dataset snapshot into `server/data/sbti/` (tracked)
-   - OR a scheduled fetch job that updates a stored snapshot (requires legal/ToS review)
+   - manual download of a public dataset snapshot into `server/data/sbti/sbti_targets_uk_companies20260127.csv` (tracked)
 2. Implement matching:
    - normalized company name matching (plus aliases if available)
    - store match confidence + matched string
@@ -88,7 +114,7 @@ Add an employer “Impact Signals” panel that complements commute CO2 with:
 - Add import script + generated `ons_intensity_map.json`
 - `/api/employer/signals` includes sector intensity band + value
 - Tests: mapping edge cases (missing SIC, multiple SICs, fallback)
-- STOP: report with 10 manual spot-checks
+- Report with 10 manual spot-checks, proceed to CP3.3
 
 ### CP3.3 — Extension UI: employer panel (confidence + override)
 - Add UI section showing:
