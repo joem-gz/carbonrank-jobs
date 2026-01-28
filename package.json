@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "build:widget": "node scripts/build_widget.mjs",
     "dev": "node scripts/dev.mjs",
     "lint": "eslint .",
     "server:build": "node scripts/build_server.mjs",

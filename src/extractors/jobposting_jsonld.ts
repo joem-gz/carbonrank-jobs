@@ -3,6 +3,8 @@ export type JobLocationExtract = {
   addressRegion?: string;
   addressCountry?: string;
   addressPostalCode?: string;
+  latitude?: number;
+  longitude?: number;
 };
 
 export type JobPostingExtract = {
@@ -28,6 +30,17 @@ const REMOTE_HINTS = [
 
 function isObject(value: unknown): value is JsonLdObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseNumber(value: unknown): number | undefined {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : undefined;
+  }
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
 function toTrimmedString(value: unknown): string {
@@ -154,6 +167,18 @@ function parseAddress(value: unknown): JobLocationExtract | null {
   };
 }
 
+function parseGeo(value: unknown): { latitude?: number; longitude?: number } {
+  if (!isObject(value)) {
+    return {};
+  }
+  const latitude = parseNumber(value.latitude ?? value.lat);
+  const longitude = parseNumber(value.longitude ?? value.lon);
+  return {
+    latitude,
+    longitude,
+  };
+}
+
 function parseJobLocation(value: unknown): JobLocationExtract | null {
   if (typeof value === "string") {
     return parseAddress(value);
@@ -161,10 +186,19 @@ function parseJobLocation(value: unknown): JobLocationExtract | null {
   if (!isObject(value)) {
     return null;
   }
-  if (value.address) {
-    return parseAddress(value.address);
+
+  const address = value.address ? parseAddress(value.address) : parseAddress(value);
+  const geo = parseGeo(value.geo ?? value);
+
+  if (!address && !geo.latitude && !geo.longitude) {
+    return null;
   }
-  return parseAddress(value);
+
+  return {
+    ...(address ?? {}),
+    latitude: geo.latitude,
+    longitude: geo.longitude,
+  };
 }
 
 function extractJobLocations(value: unknown): JobLocationExtract[] {

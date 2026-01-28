@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CarbonRank Widget Example</title>
+    <link rel="stylesheet" href="../dist/widget-1.0.0.css" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        padding: 32px;
+        background: #f7f9f8;
+      }
+
+      .job-meta {
+        margin-top: 4px;
+        color: #3d4f4a;
+      }
+
+    </style>
+  </head>
+  <body>
+    <h1>Sustainability Analyst</h1>
+    <p class="job-meta">Greenline · London, UK</p>
+    <p>This section renders from JobPosting JSON-LD on the page.</p>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "JobPosting",
+        "title": "Sustainability Analyst",
+        "hiringOrganization": { "name": "Greenline" },
+        "jobLocation": {
+          "@type": "Place",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "London",
+            "addressCountry": "UK"
+          }
+        }
+      }
+    </script>
+    <script src="../dist/widget-1.0.0.js"></script>
+    
+    
+    <script>
+      // Initialize the CarbonRank Widget to scan for JobPosting JSON-LD
+      // This example uses a local test API key and local API base URL
+      // Update these values for production use.
+      window.CarbonRankWidget?.init?.({
+        apiBaseUrl: "http://127.0.0.1:8787/api/widget/score",
+        apiKey: "local-test"
+      });
+    </script>
+  </body>
+</html>

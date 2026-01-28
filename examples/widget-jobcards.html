@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CarbonRank Widget Job Cards</title>
+    <link rel="stylesheet" href="../dist/widget-1.0.0.css" />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        padding: 32px;
+        background: #f7f9f8;
+      }
+
+      .job-card-list {
+        display: grid;
+        gap: 16px;
+      }
+
+      .job-card {
+        padding: 16px;
+        border-radius: 12px;
+        background: #ffffff;
+        border: 1px solid #e1e7e4;
+      }
+
+      .job-card__link {
+        font-weight: 600;
+        color: #0b3f35;
+        text-decoration: none;
+      }
+
+      .job-card__meta {
+        margin-top: 6px;
+        color: #3d4f4a;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CarbonRank Widget (Job Cards)</h1>
+    <p>Client-side scanning using partner selectors.</p>
+
+    <div class="job-card-list">
+      <div class="job-card">
+        <a class="job-card__link" href="https://example.com/jobs/1">Energy Analyst</a>
+        <div class="job-card__meta job-card__employer">Acme Renewables</div>
+        <div class="job-card__meta job-card__location">London</div>
+      </div>
+      <div class="job-card">
+        <a class="job-card__link" href="https://example.com/jobs/2">Climate Designer</a>
+        <div class="job-card__meta job-card__employer">Eco Studio</div>
+        <div class="job-card__meta job-card__location">Manchester</div>
+      </div>
+    </div>
+
+    <script src="../dist/widget-1.0.0.js"></script>
+    <script>
+      window.CarbonRankWidget?.init?.({
+        apiBaseUrl: "http://127.0.0.1:8787/api/widget/score",
+        apiKey: "local-test",
+        cardSelector: ".job-card",
+        fields: {
+          employer: ".job-card__employer",
+          location: ".job-card__location",
+          link: ".job-card__link",
+        },
+      });
+    </script>
+  </body>
+</html>
