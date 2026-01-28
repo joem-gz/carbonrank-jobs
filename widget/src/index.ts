@@ -6,6 +6,7 @@ import {
 } from "../../src/extractors/jobposting_jsonld";
 import { classifyLocation } from "../../src/geo/location_classifier";
 import { resolvePlaceFromLocationTokens } from "../../src/geo/place_resolver";
+import { APP_ATTRIBUTION, APP_NAME } from "../../src/ui/brand";
 
 export type WidgetBreakdown = {
   distanceKm?: number;
@@ -293,7 +294,7 @@ function ensureModal(doc: Document): ModalState {
   const body = doc.createElement("div");
   body.className = "carbonrank-widget__modal-body";
   body.innerHTML =
-    "<p>CarbonRank estimates commute emissions using the job location, typical distance, and a transport factor.</p>" +
+    `<p>${APP_NAME} estimates commute emissions using the job location, typical distance, and a transport factor.</p>` +
     "<p>Partners may provide additional data for more precise estimates.</p>";
 
   dialog.append(header, body);
@@ -367,7 +368,7 @@ function renderWidget(host: HTMLElement, payload: WidgetPayload | null, doc: Doc
 
   const attribution = doc.createElement("div");
   attribution.className = "carbonrank-widget__attribution";
-  attribution.textContent = "Powered by CarbonRank";
+  attribution.textContent = APP_ATTRIBUTION;
 
   container.append(badge, reasonEl, actions, attribution);
   host.textContent = "";

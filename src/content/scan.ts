@@ -3,6 +3,7 @@ import { ScoreBreakdown, ScoreResult } from "../scoring/types";
 import { findCards, injectBadge, parseCard, selectors } from "../sites/reed/adapter";
 import { Settings } from "../storage/settings";
 import { BADGE_ATTR } from "../ui/badge";
+import { APP_LOG_PREFIX, APP_NAME } from "../ui/brand";
 import { fetchEmployerStatus, formatEmployerStatusLabel } from "../employer/api";
 import { EmployerSignalStatus } from "../employer/types";
 import { normalizeEmployerName } from "../employer/normalize";
@@ -27,7 +28,7 @@ function getOrCreateBadge(card: HTMLElement): HTMLElement {
   if (existing instanceof HTMLElement) {
     return existing;
   }
-  return injectBadge(card, "CarbonRank");
+  return injectBadge(card, APP_NAME);
 }
 
 function updateBadgeTooltip(badge: HTMLElement): void {
@@ -199,7 +200,7 @@ export function scanAndAnnotate(
 ): void {
   const cards = findCards(root);
   if (cards.length === 0) {
-    console.debug("[CarbonRank] No Reed cards found", selectors);
+    console.debug(`${APP_LOG_PREFIX} No Reed cards found`, selectors);
     return;
   }
 

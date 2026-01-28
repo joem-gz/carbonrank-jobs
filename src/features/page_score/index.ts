@@ -13,6 +13,7 @@ import { ScoreBreakdown, ScoreResult } from "../../scoring/types";
 import { getSettings, Settings } from "../../storage/settings";
 import { noopTelemetry, Telemetry } from "../../telemetry";
 import { ensureStyles } from "../../ui/badge";
+import { APP_NAME } from "../../ui/brand";
 import { createEmployerSignalsPanel, EmployerSignalsElements } from "../../ui/employer_signals";
 import {
   fetchEmployerResolve,
@@ -189,7 +190,7 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
   root.id = ROOT_ID;
   root.className = "carbonrank-page-score";
 
-  const pill = createElement(doc, "button", "carbonrank-page-score__pill", "CarbonRank");
+  const pill = createElement(doc, "button", "carbonrank-page-score__pill", APP_NAME);
   pill.type = "button";
   pill.setAttribute("aria-expanded", "false");
 
@@ -197,7 +198,7 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
   panel.hidden = true;
 
   const header = createElement(doc, "div", "carbonrank-page-score__header");
-  const heading = createElement(doc, "span", "carbonrank-page-score__heading", "CarbonRank");
+  const heading = createElement(doc, "span", "carbonrank-page-score__heading", APP_NAME);
   const closeButton = createElement(doc, "button", "carbonrank-page-score__close", "×");
   closeButton.type = "button";
   closeButton.setAttribute("aria-label", "Close");

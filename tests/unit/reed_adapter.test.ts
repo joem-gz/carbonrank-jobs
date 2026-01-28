@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { findCards, injectBadge, parseCard } from "../../src/sites/reed/adapter";
 import { BADGE_ATTR } from "../../src/ui/badge";
+import { APP_NAME } from "../../src/ui/brand";
 
 function loadFixture(path: string): Document {
   const url = new URL(path, import.meta.url);
@@ -51,8 +52,8 @@ describe("reed adapter", () => {
     const cards = findCards(doc);
 
     const card = cards[0];
-    injectBadge(card, "CarbonRank");
-    injectBadge(card, "CarbonRank");
+    injectBadge(card, APP_NAME);
+    injectBadge(card, APP_NAME);
 
     const badges = card.querySelectorAll(`[${BADGE_ATTR}]`);
     expect(badges).toHaveLength(1);

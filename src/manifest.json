@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CarbonRank Jobs (MVP)",
+  "name": "IsThisJobGreen? Jobs (MVP)",
   "version": "0.1.0",
   "description": "Commute-only CO2e estimate for Reed job cards.",
   "permissions": ["storage"],
@@ -11,7 +11,7 @@
   },
   "action": {
     "default_popup": "popup/popup.html",
-    "default_title": "CarbonRank settings"
+    "default_title": "IsThisJobGreen? settings"
   },
   "content_scripts": [
     {

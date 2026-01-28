@@ -1,19 +1,23 @@
 # Handoff: agent/epic5-rebrand-ui
 
 ## Summary
-- Added the Epic 5 rebrand + UI polish planning document.
-- Recorded task scope and validation notes.
+- Added shared brand constants and updated extension/widget UI labels to IsThisJobGreen?.
+- Logged CP5.1 task scope for the string sweep.
 
 ## Key files
-- `docs/plans/2026-01-epic5-name-rebrand-ui-polish.md`
-- `agents/tasks/2026-01-28-epic5-name-rebrand-ui-polish.md`
+- `src/ui/brand.ts`
+- `src/popup/popup.html`
+- `src/pages/search/search.html`
+- `src/features/page_score/index.ts`
+- `widget/src/index.ts`
+- `agents/tasks/2026-01-28-epic5-cp5-1.md`
 
 ## How to verify
 Commands + expected result
-- None (documentation-only change).
+- Not run (UI string updates only).
 
 ## Behavior changes
-- None.
+- Extension UI labels and widget attribution copy now use IsThisJobGreen?.
 
 ## Risks / edge cases
 - None.
