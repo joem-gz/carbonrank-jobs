@@ -7,6 +7,7 @@ const fixtureJson = readFileSync(
   resolve("tests/fixtures/adzuna_search_results.json"),
   "utf-8",
 );
+const headless = process.env.PLAYWRIGHT_HEADLESS === "1";
 
 test("renders search results and sorting", async () => {
   test.setTimeout(60_000);
@@ -14,7 +15,7 @@ test("renders search results and sorting", async () => {
   const userDataDir = mkdtempSync(join(tmpdir(), "carbonrank-e2e-"));
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
+    headless,
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,

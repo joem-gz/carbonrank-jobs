@@ -8,10 +8,13 @@ mkdirSync(".pw-home", { recursive: true });
 
 const homeDir = resolve(".pw-home");
 
+const browsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH ?? "../.pw-browsers";
+const extraArgs = process.argv.slice(2);
+
 const env = {
   ...process.env,
   TMPDIR: ".pw-tmp",
-  PLAYWRIGHT_BROWSERS_PATH: "../.pw-browsers",
+  PLAYWRIGHT_BROWSERS_PATH: browsersPath,
   HOME: homeDir,
   USERPROFILE: homeDir,
 };
@@ -23,7 +26,7 @@ if (process.platform === "darwin") {
   env.PLAYWRIGHT_HOST_PLATFORM_OVERRIDE = `mac${macMajor}-${arch}`;
 }
 
-const result = spawnSync("playwright", ["test"], {
+const result = spawnSync("playwright", ["test", ...extraArgs], {
   stdio: "inherit",
   env,
   shell: true,

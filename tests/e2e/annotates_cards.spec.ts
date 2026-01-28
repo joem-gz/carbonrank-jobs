@@ -11,6 +11,7 @@ const modalHtml = readFileSync(
   resolve("tests/fixtures/reed_job_details_drawer_modal.html"),
   "utf-8",
 );
+const headless = process.env.PLAYWRIGHT_HEADLESS === "1";
 
 test("annotates Reed cards with expected badge states", async () => {
   test.setTimeout(60_000);
@@ -20,7 +21,7 @@ test("annotates Reed cards with expected badge states", async () => {
   mkdirSync(crashpadDir, { recursive: true });
 
   const context = await chromium.launchPersistentContext(userDataDir, {
-    headless: false,
+    headless,
     args: [
       `--disable-extensions-except=${extensionPath}`,
       `--load-extension=${extensionPath}`,
