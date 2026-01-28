@@ -12,6 +12,7 @@ import { scoreLocation } from "../../scoring/location_scoring";
 import { ScoreBreakdown, ScoreResult } from "../../scoring/types";
 import { getSettings, Settings } from "../../storage/settings";
 import { noopTelemetry, Telemetry } from "../../telemetry";
+import { createAttributionLink } from "../../ui/attribution";
 import { ensureStyles } from "../../ui/badge";
 import { APP_NAME } from "../../ui/brand";
 import { createEmployerSignalsPanel, EmployerSignalsElements } from "../../ui/employer_signals";
@@ -61,6 +62,7 @@ type PageScoreElements = {
   scoreReason: HTMLElement;
   breakdown: HTMLElement;
   employer: EmployerSignalsElements;
+  attribution: HTMLAnchorElement;
 };
 
 export type PageScoreDependencies = {
@@ -122,13 +124,27 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
 function ensurePageScoreElements(doc: Document): PageScoreElements {
   const existing = doc.getElementById(ROOT_ID);
   if (existing) {
+    const panel = existing.querySelector(
+      ".carbonrank-page-score__panel",
+    ) as HTMLDivElement;
+    let attribution = existing.querySelector(
+      ".carbonrank-page-score__attribution",
+    ) as HTMLAnchorElement | null;
+    if (!attribution) {
+      const footer = createElement(doc, "div", "carbonrank-page-score__footer");
+      attribution = createAttributionLink(doc, {
+        className: "carbonrank-page-score__attribution",
+      });
+      footer.append(attribution);
+      panel.append(footer);
+    }
     const employerRoot = existing.querySelector(
       ".carbonrank-page-score__employer",
     ) as HTMLDivElement;
     return {
       root: existing,
       pill: existing.querySelector(".carbonrank-page-score__pill") as HTMLButtonElement,
-      panel: existing.querySelector(".carbonrank-page-score__panel") as HTMLDivElement,
+      panel,
       closeButton: existing.querySelector(
         ".carbonrank-page-score__close",
       ) as HTMLButtonElement,
@@ -183,6 +199,7 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
           ".carbonrank-page-score__employer-sbti-note",
         ) as HTMLParagraphElement,
       },
+      attribution,
     };
   }
 
@@ -213,9 +230,14 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
   const scoreReason = createElement(doc, "p", "carbonrank-page-score__score-reason");
   const breakdown = createElement(doc, "div", "carbonrank-page-score__breakdown");
   const employer = createEmployerSignalsPanel(doc);
+  const footer = createElement(doc, "div", "carbonrank-page-score__footer");
+  const attribution = createAttributionLink(doc, {
+    className: "carbonrank-page-score__attribution",
+  });
+  footer.append(attribution);
 
   body.append(title, company, location, scoreValue, scoreReason, breakdown, employer.root);
-  panel.append(header, body);
+  panel.append(header, body, footer);
   root.append(pill, panel);
 
   const target = doc.body ?? doc.documentElement;
@@ -233,6 +255,7 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
     scoreReason,
     breakdown,
     employer,
+    attribution,
   };
 }
 

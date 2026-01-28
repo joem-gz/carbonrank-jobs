@@ -6,7 +6,8 @@ import {
 } from "../../src/extractors/jobposting_jsonld";
 import { classifyLocation } from "../../src/geo/location_classifier";
 import { resolvePlaceFromLocationTokens } from "../../src/geo/place_resolver";
-import { APP_ATTRIBUTION, APP_NAME } from "../../src/ui/brand";
+import { createAttributionLink } from "../../src/ui/attribution";
+import { APP_NAME } from "../../src/ui/brand";
 
 export type WidgetBreakdown = {
   distanceKm?: number;
@@ -368,9 +369,16 @@ function renderWidget(host: HTMLElement, payload: WidgetPayload | null, doc: Doc
 
   const attribution = doc.createElement("div");
   attribution.className = "carbonrank-widget__attribution";
-  attribution.textContent = APP_ATTRIBUTION;
+  const attributionLink = createAttributionLink(doc, {
+    className: "carbonrank-widget__attribution-link",
+  });
+  attribution.appendChild(attributionLink);
 
-  container.append(badge, reasonEl, actions, attribution);
+  const footer = doc.createElement("div");
+  footer.className = "carbonrank-widget__footer";
+  footer.append(actions, attribution);
+
+  container.append(badge, reasonEl, footer);
   host.textContent = "";
   host.appendChild(container);
   host.setAttribute(RENDERED_ATTR, "true");

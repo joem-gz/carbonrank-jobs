@@ -3,6 +3,7 @@ import { fetchProxyJobs } from "../../search/api";
 import { scoreJobs } from "../../search/scoring";
 import { ProxyJob, ScoredJob, SearchQuery } from "../../search/types";
 import { DEFAULT_SETTINGS, getSettings, Settings } from "../../storage/settings";
+import { setAttributionLink } from "../../ui/attribution";
 import {
   getSavedJobs,
   getSavedSearches,
@@ -43,6 +44,7 @@ const savedSearchesEl = document.querySelector<HTMLUListElement>("#saved-searche
 const savedJobsEl = document.querySelector<HTMLUListElement>("#saved-jobs");
 const homePostcodeEl = document.querySelector<HTMLSpanElement>("#home-postcode-value");
 const resultCountEl = document.querySelector<HTMLSpanElement>("#result-count");
+const attributionLink = document.querySelector<HTMLAnchorElement>("#search-attribution");
 
 if (
   !form ||
@@ -58,10 +60,13 @@ if (
   !savedSearchesEl ||
   !savedJobsEl ||
   !homePostcodeEl ||
-  !resultCountEl
+  !resultCountEl ||
+  !attributionLink
 ) {
   throw new Error("Search page DOM missing required elements");
 }
+
+setAttributionLink(attributionLink);
 
 const state: SearchState = {
   settings: DEFAULT_SETTINGS,
