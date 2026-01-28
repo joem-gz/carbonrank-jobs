@@ -13,3 +13,16 @@ export type ScoreResponseMessage = {
   requestId: string;
   result: ScoreResult;
 };
+
+export type FetchJsonRequestMessage = {
+  type: "fetch_json_request";
+  url: string;
+};
+
+export type FetchJsonResponseMessage = {
+  type: "fetch_json_response";
+  ok: boolean;
+  status: number;
+  data?: unknown;
+  error?: string;
+};

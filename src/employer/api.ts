@@ -5,6 +5,10 @@ import {
   EmployerSignalsResponse,
   EmployerSignalsResult,
 } from "./types";
+import {
+  FetchJsonRequestMessage,
+  FetchJsonResponseMessage,
+} from "../messages";
 import { normalizeEmployerName } from "./normalize";
 
 export const DEFAULT_EMPLOYER_API_BASE_URL = "http://localhost:8787";
@@ -65,12 +69,59 @@ export function buildEmployerSignalsUrl(
   return url.toString();
 }
 
-async function fetchJson<T>(url: string, fetchFn: typeof fetch = fetch): Promise<T> {
+async function fetchJsonWithFetch<T>(
+  url: string,
+  fetchFn: typeof fetch,
+): Promise<T> {
   const response = await fetchFn(url);
   if (!response.ok) {
     throw new Error(`Employer API failed with ${response.status}`);
   }
   return (await response.json()) as T;
+}
+
+function hasRuntimeFetch(): boolean {
+  return typeof chrome !== "undefined" && !!chrome.runtime?.sendMessage;
+}
+
+async function fetchJsonViaRuntime(url: string): Promise<FetchJsonResponseMessage> {
+  return new Promise((resolve, reject) => {
+    if (!hasRuntimeFetch()) {
+      reject(new Error("Runtime messaging unavailable"));
+      return;
+    }
+    const message: FetchJsonRequestMessage = {
+      type: "fetch_json_request",
+      url,
+    };
+    chrome.runtime.sendMessage(message, (response: FetchJsonResponseMessage) => {
+      if (chrome.runtime.lastError) {
+        reject(chrome.runtime.lastError);
+        return;
+      }
+      if (!response || response.type !== "fetch_json_response") {
+        reject(new Error("Invalid runtime fetch response"));
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+async function fetchJson<T>(url: string, fetchFn?: typeof fetch): Promise<T> {
+  if (fetchFn) {
+    return fetchJsonWithFetch(url, fetchFn);
+  }
+
+  if (hasRuntimeFetch()) {
+    const response = await fetchJsonViaRuntime(url);
+    if (!response.ok) {
+      throw new Error(`Employer API failed with ${response.status}`);
+    }
+    return response.data as T;
+  }
+
+  return fetchJsonWithFetch(url, fetch);
 }
 
 export async function fetchEmployerResolve(
@@ -85,10 +136,7 @@ export async function fetchEmployerResolve(
   }
 
   const url = buildEmployerResolveUrl(name, hintLocation, options.baseUrl);
-  const payload = await fetchJson<EmployerResolveResponse>(
-    url,
-    options.fetchFn ?? fetch,
-  );
+  const payload = await fetchJson<EmployerResolveResponse>(url, options.fetchFn);
   resolveCache.set(cacheKey, payload);
   return payload;
 }
@@ -105,10 +153,7 @@ export async function fetchEmployerSignals(
   }
 
   const url = buildEmployerSignalsUrl(companyNumber, companyName, options.baseUrl);
-  const payload = await fetchJson<EmployerSignalsResponse>(
-    url,
-    options.fetchFn ?? fetch,
-  );
+  const payload = await fetchJson<EmployerSignalsResponse>(url, options.fetchFn);
   signalsCache.set(cacheKey, payload);
   return payload;
 }
