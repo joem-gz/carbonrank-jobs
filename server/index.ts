@@ -42,6 +42,10 @@ function loadEnvFile(path: string): void {
 
 loadEnvFile(resolve(process.cwd(), "server", ".env"));
 
+console.log("cwd", process.cwd());
+console.log("envPath", resolve(process.cwd(), "server", ".env"));
+console.log("WIDGET_PARTNERS_JSON?", !!process.env.WIDGET_PARTNERS_JSON);
+
 const PORT = Number.parseInt(process.env.PORT ?? "8787", 10);
 const CACHE_TTL_MS = Number.parseInt(process.env.CACHE_TTL_MS ?? "600000", 10);
 const CACHE_MAX = Number.parseInt(process.env.CACHE_MAX ?? "200", 10);

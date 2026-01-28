@@ -41,10 +41,15 @@
       }
     </script>
     <script src="../dist/widget-1.0.0.js"></script>
+    
+    
     <script>
+      // Initialize the CarbonRank Widget to scan for JobPosting JSON-LD
+      // This example uses a local test API key and local API base URL
+      // Update these values for production use.
       window.CarbonRankWidget?.init?.({
-        apiBaseUrl: "https:///api/widget/score",
-        apiKey: "partner-demo-key",
+        apiBaseUrl: "http://127.0.0.1:8787/api/widget/score",
+        apiKey: "local-test"
       });
     </script>
   </body>
