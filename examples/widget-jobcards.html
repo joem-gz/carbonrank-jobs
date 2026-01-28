@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>CarbonRank Widget Job Cards</title>
-    <link rel="stylesheet" href="../dist/widget.css" />
+    <link rel="stylesheet" href="../dist/widget-1.0.0.css" />
     <style>
       body {
         font-family: system-ui, -apple-system, sans-serif;
@@ -54,10 +54,10 @@
       </div>
     </div>
 
-    <script src="../dist/widget.js"></script>
+    <script src="../dist/widget-1.0.0.js"></script>
     <script>
       window.CarbonRankWidget?.init?.({
-        apiBaseUrl: "https://example.test/api/widget/score",
+        apiBaseUrl: "http://127.0.0.1:8787/api/widget/score",
         apiKey: "partner-demo-key",
         cardSelector: ".job-card",
         fields: {

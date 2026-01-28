@@ -1,7 +1,14 @@
+import { readFileSync } from "node:fs";
+import { copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { build } from "esbuild";
 
 const distDir = resolve("dist");
+const packageJson = JSON.parse(
+  readFileSync(resolve("package.json"), "utf-8"),
+);
+const version = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+const versionSuffix = version.replace(/[^0-9A-Za-z.-]/g, "-");
 let built = false;
 
 export async function ensureWidgetBuild(): Promise<void> {
@@ -22,4 +29,13 @@ export async function ensureWidgetBuild(): Promise<void> {
       ".css": "css",
     },
   });
+
+  await copyFile(
+    resolve(distDir, "widget.js"),
+    resolve(distDir, `widget-${versionSuffix}.js`),
+  );
+  await copyFile(
+    resolve(distDir, "widget.css"),
+    resolve(distDir, `widget-${versionSuffix}.css`),
+  );
 }
