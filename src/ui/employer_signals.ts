@@ -1,3 +1,6 @@
+import { TOOLTIP_COPY } from "./copy/tooltips";
+import { createTooltip } from "./tooltip";
+
 export type EmployerSignalsElements = {
   root: HTMLDivElement;
   status: HTMLParagraphElement;
@@ -7,12 +10,18 @@ export type EmployerSignalsElements = {
   changeButton: HTMLButtonElement;
   select: HTMLSelectElement;
   sicCodes: HTMLParagraphElement;
+  sicValue: HTMLSpanElement;
   intensity: HTMLParagraphElement;
+  intensityValue: HTMLSpanElement;
   note: HTMLParagraphElement;
   sbtiBadge: HTMLSpanElement;
   sbtiDetails: HTMLDivElement;
   sbtiNote: HTMLParagraphElement;
 };
+
+const SIC_TOOLTIP_ID = "carbonrank-page-score-tooltip-sic";
+const SECTOR_TOOLTIP_ID = "carbonrank-page-score-tooltip-sector";
+const SBTI_TOOLTIP_ID = "carbonrank-page-score-tooltip-sbti";
 
 function createElement<K extends keyof HTMLElementTagNameMap>(
   doc: Document,
@@ -26,6 +35,22 @@ function createElement<K extends keyof HTMLElementTagNameMap>(
     el.textContent = text;
   }
   return el;
+}
+
+function createTooltipLabel(
+  doc: Document,
+  labelText: string,
+  tooltip: { description: string; ariaLabel: string },
+  tooltipId: string,
+): HTMLSpanElement {
+  const label = createElement(doc, "span", "carbonrank-page-score__label", labelText);
+  const tooltipEl = createTooltip(doc, {
+    id: tooltipId,
+    text: tooltip.description,
+    ariaLabel: tooltip.ariaLabel,
+  });
+  label.append(tooltipEl);
+  return label as HTMLSpanElement;
 }
 
 export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElements {
@@ -78,12 +103,24 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
   select.hidden = true;
 
   const sicCodes = createElement(doc, "p", "carbonrank-page-score__employer-sic");
-  const intensity = createElement(
+  const sicLabel = createTooltipLabel(
     doc,
-    "p",
-    "carbonrank-page-score__employer-intensity",
+    TOOLTIP_COPY.sic.label,
+    TOOLTIP_COPY.sic,
+    SIC_TOOLTIP_ID,
   );
-  intensity.title = "Sector baseline from ONS industry averages (not company footprint).";
+  const sicValue = createElement(doc, "span", "carbonrank-page-score__value");
+  sicCodes.append(sicLabel, sicValue);
+
+  const intensity = createElement(doc, "p", "carbonrank-page-score__employer-intensity");
+  const intensityLabel = createTooltipLabel(
+    doc,
+    TOOLTIP_COPY.sectorBaseline.label,
+    TOOLTIP_COPY.sectorBaseline,
+    SECTOR_TOOLTIP_ID,
+  );
+  const intensityValue = createElement(doc, "span", "carbonrank-page-score__value");
+  intensity.append(intensityLabel, intensityValue);
   const note = createElement(
     doc,
     "p",
@@ -92,7 +129,12 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
   );
 
   const sbtiRow = createElement(doc, "div", "carbonrank-page-score__employer-sbti");
-  const sbtiLabel = createElement(doc, "span", "carbonrank-page-score__label", "SBTi");
+  const sbtiLabel = createTooltipLabel(
+    doc,
+    TOOLTIP_COPY.sbti.label,
+    TOOLTIP_COPY.sbti,
+    SBTI_TOOLTIP_ID,
+  );
   const sbtiBadge = createElement(
     doc,
     "span",
@@ -137,7 +179,9 @@ export function createEmployerSignalsPanel(doc: Document): EmployerSignalsElemen
     changeButton,
     select,
     sicCodes: sicCodes as HTMLParagraphElement,
+    sicValue: sicValue as HTMLSpanElement,
     intensity: intensity as HTMLParagraphElement,
+    intensityValue: intensityValue as HTMLSpanElement,
     note: note as HTMLParagraphElement,
     sbtiBadge: sbtiBadge as HTMLSpanElement,
     sbtiDetails,

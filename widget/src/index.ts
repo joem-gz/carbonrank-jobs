@@ -8,6 +8,8 @@ import { classifyLocation } from "../../src/geo/location_classifier";
 import { resolvePlaceFromLocationTokens } from "../../src/geo/place_resolver";
 import { createAttributionLink } from "../../src/ui/attribution";
 import { APP_NAME } from "../../src/ui/brand";
+import { TOOLTIP_COPY } from "../../src/ui/copy/tooltips";
+import { createTooltip } from "../../src/ui/tooltip";
 
 export type WidgetBreakdown = {
   distanceKm?: number;
@@ -123,6 +125,29 @@ function parseNumber(value: string | null | undefined): number | undefined {
   }
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function createTooltipListItem(
+  doc: Document,
+  label: string,
+  tooltip: { description: string; ariaLabel: string },
+  tooltipId: string,
+): HTMLLIElement {
+  const item = doc.createElement("li");
+  item.className = "carbonrank-widget__modal-list-item";
+
+  const labelEl = doc.createElement("span");
+  labelEl.className = "carbonrank-widget__modal-label";
+  labelEl.textContent = label;
+  const tooltipEl = createTooltip(doc, {
+    id: tooltipId,
+    text: tooltip.description,
+    ariaLabel: tooltip.ariaLabel,
+  });
+  labelEl.append(tooltipEl);
+
+  item.append(labelEl);
+  return item;
 }
 
 function hasServerPayload(root: ParentNode): boolean {
@@ -294,9 +319,36 @@ function ensureModal(doc: Document): ModalState {
 
   const body = doc.createElement("div");
   body.className = "carbonrank-widget__modal-body";
-  body.innerHTML =
-    `<p>${APP_NAME} estimates commute emissions using the job location, typical distance, and a transport factor.</p>` +
-    "<p>Partners may provide additional data for more precise estimates.</p>";
+  const intro = doc.createElement("p");
+  intro.textContent = `${APP_NAME} estimates commute emissions using the job location, typical distance, and a transport factor.`;
+  const partner = doc.createElement("p");
+  partner.textContent = "Partners may provide additional data for more precise estimates.";
+  const signals = doc.createElement("p");
+  signals.className = "carbonrank-widget__modal-section";
+  signals.textContent = "Employer signals can include:";
+  const signalsList = doc.createElement("ul");
+  signalsList.className = "carbonrank-widget__modal-list";
+  signalsList.append(
+    createTooltipListItem(
+      doc,
+      TOOLTIP_COPY.sic.label,
+      TOOLTIP_COPY.sic,
+      "carbonrank-widget-tooltip-sic",
+    ),
+    createTooltipListItem(
+      doc,
+      TOOLTIP_COPY.sbti.label,
+      TOOLTIP_COPY.sbti,
+      "carbonrank-widget-tooltip-sbti",
+    ),
+    createTooltipListItem(
+      doc,
+      TOOLTIP_COPY.sectorBaseline.label,
+      TOOLTIP_COPY.sectorBaseline,
+      "carbonrank-widget-tooltip-sector",
+    ),
+  );
+  body.append(intro, partner, signals, signalsList);
 
   dialog.append(header, body);
   modal.append(backdrop, dialog);

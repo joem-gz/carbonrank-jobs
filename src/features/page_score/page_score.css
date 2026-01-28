@@ -133,8 +133,23 @@
 }
 
 .carbonrank-page-score__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 600;
   color: #0f172a;
+}
+
+.carbonrank-page-score__employer-sic,
+.carbonrank-page-score__employer-intensity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.carbonrank-page-score__value {
+  font-weight: 500;
 }
 
 .carbonrank-page-score__employer-name {
@@ -233,6 +248,54 @@
 .carbonrank-page-score__employer-sbti-note {
   font-size: 11px;
   color: #64748b;
+}
+
+.carbonrank-page-score .carbonrank-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.carbonrank-page-score .carbonrank-tooltip__trigger {
+  border: none;
+  background: #e2e8f0;
+  color: #475569;
+  border-radius: 999px;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.carbonrank-page-score .carbonrank-tooltip__trigger:focus-visible {
+  outline: 2px solid #0b6b5b;
+  outline-offset: 2px;
+}
+
+.carbonrank-page-score .carbonrank-tooltip__content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+  text-align: left;
+}
+
+.carbonrank-page-score .carbonrank-tooltip:focus-within .carbonrank-tooltip__content,
+.carbonrank-page-score .carbonrank-tooltip:hover .carbonrank-tooltip__content {
+  opacity: 1;
+  visibility: visible;
 }
 
 .carbonrank-page-score__footer {

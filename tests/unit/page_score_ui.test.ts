@@ -170,7 +170,8 @@ describe("page score UI", () => {
       "Information technology consultancy activities",
     );
     const intensity = doc.querySelector(".carbonrank-page-score__employer-intensity");
-    expect(intensity?.textContent).toContain("Sector baseline: Low (0.42)");
+    expect(intensity?.textContent).toContain("Sector baseline");
+    expect(intensity?.textContent).toContain("Low (0.42)");
     const sbtiBadge = doc.querySelector(".carbonrank-page-score__employer-sbti-badge");
     expect(sbtiBadge?.textContent).toContain("Targets set");
     const sbtiDetails = doc.querySelector(

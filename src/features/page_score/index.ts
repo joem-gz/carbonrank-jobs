@@ -141,26 +141,12 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
     const employerRoot = existing.querySelector(
       ".carbonrank-page-score__employer",
     ) as HTMLDivElement;
-    return {
-      root: existing,
-      pill: existing.querySelector(".carbonrank-page-score__pill") as HTMLButtonElement,
-      panel,
-      closeButton: existing.querySelector(
-        ".carbonrank-page-score__close",
-      ) as HTMLButtonElement,
-      title: existing.querySelector(".carbonrank-page-score__job-title") as HTMLElement,
-      company: existing.querySelector(".carbonrank-page-score__job-company") as HTMLElement,
-      location: existing.querySelector(".carbonrank-page-score__job-location") as HTMLElement,
-      scoreValue: existing.querySelector(
-        ".carbonrank-page-score__score-value",
-      ) as HTMLElement,
-      scoreReason: existing.querySelector(
-        ".carbonrank-page-score__score-reason",
-      ) as HTMLElement,
-      breakdown: existing.querySelector(
-        ".carbonrank-page-score__breakdown",
-      ) as HTMLElement,
-      employer: {
+    let employer = {} as EmployerSignalsElements;
+    if (!employerRoot.querySelector(".carbonrank-page-score__value")) {
+      employer = createEmployerSignalsPanel(doc);
+      employerRoot.replaceWith(employer.root);
+    } else {
+      employer = {
         root: employerRoot,
         status: employerRoot.querySelector(
           ".carbonrank-page-score__employer-status",
@@ -183,9 +169,15 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
         sicCodes: employerRoot.querySelector(
           ".carbonrank-page-score__employer-sic",
         ) as HTMLParagraphElement,
+        sicValue: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-sic .carbonrank-page-score__value",
+        ) as HTMLSpanElement,
         intensity: employerRoot.querySelector(
           ".carbonrank-page-score__employer-intensity",
         ) as HTMLParagraphElement,
+        intensityValue: employerRoot.querySelector(
+          ".carbonrank-page-score__employer-intensity .carbonrank-page-score__value",
+        ) as HTMLSpanElement,
         note: employerRoot.querySelector(
           ".carbonrank-page-score__employer-note",
         ) as HTMLParagraphElement,
@@ -198,7 +190,28 @@ function ensurePageScoreElements(doc: Document): PageScoreElements {
         sbtiNote: employerRoot.querySelector(
           ".carbonrank-page-score__employer-sbti-note",
         ) as HTMLParagraphElement,
-      },
+      };
+    }
+    return {
+      root: existing,
+      pill: existing.querySelector(".carbonrank-page-score__pill") as HTMLButtonElement,
+      panel,
+      closeButton: existing.querySelector(
+        ".carbonrank-page-score__close",
+      ) as HTMLButtonElement,
+      title: existing.querySelector(".carbonrank-page-score__job-title") as HTMLElement,
+      company: existing.querySelector(".carbonrank-page-score__job-company") as HTMLElement,
+      location: existing.querySelector(".carbonrank-page-score__job-location") as HTMLElement,
+      scoreValue: existing.querySelector(
+        ".carbonrank-page-score__score-value",
+      ) as HTMLElement,
+      scoreReason: existing.querySelector(
+        ".carbonrank-page-score__score-reason",
+      ) as HTMLElement,
+      breakdown: existing.querySelector(
+        ".carbonrank-page-score__breakdown",
+      ) as HTMLElement,
+      employer,
       attribution,
     };
   }
@@ -440,13 +453,17 @@ function populateEmployerOptions(
   select.value = overrideCompanyNumber ?? "";
 }
 
+function setSignalValue(target: HTMLSpanElement, value: string): void {
+  target.textContent = `: ${value}`;
+}
+
 function setEmployerLoading(elements: EmployerSignalsElements): void {
   elements.status.textContent = "Employer signals: loading";
   elements.advertiser.textContent = "";
   elements.matchName.textContent = "Loading…";
   elements.matchConfidence.textContent = "";
-  elements.sicCodes.textContent = "SIC codes: —";
-  elements.intensity.textContent = "Sector baseline: —";
+  setSignalValue(elements.sicValue, "—");
+  setSignalValue(elements.intensityValue, "—");
   setSbtiBadge(elements.sbtiBadge, "—", "muted");
   setSbtiDetails(elements.sbtiDetails, []);
   elements.changeButton.textContent = "Change";
@@ -460,8 +477,8 @@ function setEmployerEmpty(elements: EmployerSignalsElements, message: string): v
   elements.advertiser.textContent = "";
   elements.matchName.textContent = message;
   elements.matchConfidence.textContent = "";
-  elements.sicCodes.textContent = "SIC codes: Not listed";
-  elements.intensity.textContent = "Sector baseline: unavailable";
+  setSignalValue(elements.sicValue, "Not listed");
+  setSignalValue(elements.intensityValue, "unavailable");
   setSbtiBadge(elements.sbtiBadge, "Unavailable", "muted");
   setSbtiDetails(elements.sbtiDetails, []);
   elements.changeButton.textContent = "Change";
@@ -489,8 +506,8 @@ function setEmployerSignalsState(
     elements.matchName.textContent =
       result.reason ?? "Employer not disclosed (advert posted by recruitment agency)";
     elements.matchConfidence.textContent = "";
-    elements.sicCodes.textContent = "SIC codes: Not listed";
-    elements.intensity.textContent = "Sector baseline: unavailable";
+    setSignalValue(elements.sicValue, "Not listed");
+    setSignalValue(elements.intensityValue, "unavailable");
     renderSbti(elements, null, false);
     elements.changeButton.textContent = "Set employer";
     elements.changeButton.disabled = false;
@@ -500,8 +517,8 @@ function setEmployerSignalsState(
 
   if (!result.selectedCandidate) {
     elements.matchName.textContent = result.reason ?? "No match";
-    elements.sicCodes.textContent = "SIC codes: Not listed";
-    elements.intensity.textContent = "Sector baseline: unavailable";
+    setSignalValue(elements.sicValue, "Not listed");
+    setSignalValue(elements.intensityValue, "unavailable");
     renderSbti(elements, null, false);
     elements.changeButton.disabled = true;
     elements.select.hidden = true;
@@ -514,11 +531,14 @@ function setEmployerSignalsState(
   const sicCodes = showSignals
     ? result.signals?.sic_codes ?? result.selectedCandidate.sic_codes ?? []
     : [];
-  elements.sicCodes.textContent = `SIC codes: ${formatSicCodes(
-    sicCodes,
-    showSignals ? result.signals?.sector_description : null,
-    showSignals ? result.signals?.sector_intensity_sic_code : null,
-  )}`;
+  setSignalValue(
+    elements.sicValue,
+    formatSicCodes(
+      sicCodes,
+      showSignals ? result.signals?.sector_description : null,
+      showSignals ? result.signals?.sector_intensity_sic_code : null,
+    ),
+  );
 
   if (
     showSignals &&
@@ -527,9 +547,9 @@ function setEmployerSignalsState(
   ) {
     const bandLabel = formatBandLabel(result.signals.sector_intensity_band);
     const value = result.signals.sector_intensity_value.toFixed(2);
-    elements.intensity.textContent = `Sector baseline: ${bandLabel} (${value})`;
+    setSignalValue(elements.intensityValue, `${bandLabel} (${value})`);
   } else {
-    elements.intensity.textContent = "Sector baseline: unavailable";
+    setSignalValue(elements.intensityValue, "unavailable");
   }
 
   renderSbti(elements, result.signals?.sbti, true);
