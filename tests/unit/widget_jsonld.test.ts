@@ -30,11 +30,12 @@ describe("widget JobPosting JSON-LD", () => {
 
   it("requests scores with geo coordinates when available", async () => {
     const doc = loadFixture("../fixtures/widget_jobposting_onsite.html");
-    const fetchMock = vi.fn(async () =>
-      ({
-        ok: true,
-        json: async () => ({ status: "ok", score: 210 }),
-      }) as Response,
+    const fetchMock = vi.fn<Promise<Response>, [RequestInfo | URL, RequestInit?]>(
+      async () =>
+        ({
+          ok: true,
+          json: async () => ({ status: "ok", score: 210 }),
+        }) as Response,
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -46,8 +47,11 @@ describe("widget JobPosting JSON-LD", () => {
     );
     expect(badge?.textContent).toBe("210 kgCO2e/yr");
 
-    const [, requestInit] = fetchMock.mock.calls[0];
-    const body = JSON.parse(requestInit?.body as string);
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    if (!requestInit || typeof requestInit.body !== "string") {
+      throw new Error("Missing request body");
+    }
+    const body = JSON.parse(requestInit.body);
     expect(body.lat).toBeCloseTo(51.4545, 4);
     expect(body.lon).toBeCloseTo(-2.5879, 4);
   });
