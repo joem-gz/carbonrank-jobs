@@ -2,21 +2,38 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
+    branches: ["**"]
   pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: .pw-browsers
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: .pw-browsers
+          key: ${{ runner.os }}-pw-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pw-
+
       - run: npm ci
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: xvfb-run --auto-servernum -- npm run test:e2e
+
+      - name: Install Playwright Chromium (into .pw-browsers)
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E tests
+        run: xvfb-run --auto-servernum -- npm run test:e2e
