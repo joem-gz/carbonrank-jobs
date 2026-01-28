@@ -206,6 +206,20 @@ function parseOfficeDays(value: string | null | undefined): number | undefined {
   return Math.min(5, Math.max(0, parsed));
 }
 
+async function readJsonBody(
+  request: import("node:http").IncomingMessage,
+): Promise<unknown> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const body = Buffer.concat(chunks).toString("utf-8").trim();
+  if (!body) {
+    return {};
+  }
+  return JSON.parse(body);
+}
+
 function parseSearchQuery(url: URL): SearchQuery {
   const queryText = url.searchParams.get("q") ?? "";
   const where = url.searchParams.get("where") ?? "";
@@ -249,7 +263,7 @@ async function handleJobsSearch(
     sendJson(response, 500, { error: "Missing Adzuna credentials" });
     return;
   }
-
+  
   const query = parseSearchQuery(url);
   const cacheKey = buildCacheKey(query);
   const cached = cache.get(cacheKey);
