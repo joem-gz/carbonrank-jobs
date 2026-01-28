@@ -16,6 +16,7 @@ const sendMessage = vi.fn((message, callback) => {
     result: { status: "no_data", reason: "Test" },
   });
 });
+const fetchEmployerStatus = vi.fn().mockResolvedValue("no_data");
 
 function loadFixture(path: string): Document {
   const url = new URL(path, import.meta.url);
@@ -47,6 +48,7 @@ describe("scanAndAnnotate", () => {
       scanAndAnnotate(doc, settings, {
         sendMessage,
         createRequestId: () => "id-1",
+        fetchEmployerStatus,
       }),
     );
 
@@ -78,6 +80,7 @@ describe("scanAndAnnotate", () => {
     scanAndAnnotate(doc, settings, {
       sendMessage,
       createRequestId: () => "id-2",
+      fetchEmployerStatus,
     });
 
     expect(doc.querySelectorAll("[data-carbonrank-badge]")).toHaveLength(0);

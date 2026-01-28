@@ -3,8 +3,13 @@ import { ScoreBreakdown, ScoreResult } from "../scoring/types";
 import { findCards, injectBadge, parseCard, selectors } from "../sites/reed/adapter";
 import { Settings } from "../storage/settings";
 import { BADGE_ATTR } from "../ui/badge";
+import { fetchEmployerStatus, formatEmployerStatusLabel } from "../employer/api";
+import { EmployerSignalStatus } from "../employer/types";
+import { normalizeEmployerName } from "../employer/normalize";
 
 const NON_JOB_PATH_HINTS = ["/courses", "/course", "/learning", "/events", "/training"];
+const employerStatusCache = new Map<string, EmployerSignalStatus>();
+const employerStatusRequests = new Map<string, Promise<EmployerSignalStatus>>();
 
 type SendMessage = (
   message: ScoreRequestMessage,
@@ -14,6 +19,7 @@ type SendMessage = (
 export type ScanDependencies = {
   sendMessage?: SendMessage;
   createRequestId?: () => string;
+  fetchEmployerStatus?: (name: string, hintLocation: string) => Promise<EmployerSignalStatus>;
 };
 
 function getOrCreateBadge(card: HTMLElement): HTMLElement {
@@ -24,13 +30,65 @@ function getOrCreateBadge(card: HTMLElement): HTMLElement {
   return injectBadge(card, "CarbonRank");
 }
 
-function setBadgeState(badge: HTMLElement, text: string, tooltip?: string): void {
-  badge.textContent = text;
-  if (tooltip) {
-    badge.title = tooltip;
+function updateBadgeTooltip(badge: HTMLElement): void {
+  const scoreTooltip = badge.dataset.scoreTooltip ?? "";
+  const employerTooltip = badge.dataset.employerTooltip ?? "";
+  const combined = [scoreTooltip, employerTooltip].filter(Boolean).join("\n\n");
+  if (combined) {
+    badge.title = combined;
   } else {
     badge.removeAttribute("title");
   }
+}
+
+function setBadgeState(badge: HTMLElement, text: string, tooltip?: string): void {
+  badge.textContent = text;
+  if (tooltip) {
+    badge.dataset.scoreTooltip = tooltip;
+  } else {
+    delete badge.dataset.scoreTooltip;
+  }
+  updateBadgeTooltip(badge);
+}
+
+function setEmployerTooltip(badge: HTMLElement, status: EmployerSignalStatus): void {
+  badge.dataset.employerTooltip = `Employer signals: ${formatEmployerStatusLabel(status)}`;
+  updateBadgeTooltip(badge);
+}
+
+function normalizeLocation(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function buildEmployerStatusKey(name: string, location: string): string {
+  return `${normalizeEmployerName(name)}|${normalizeLocation(location)}`;
+}
+
+function resolveEmployerStatus(
+  name: string,
+  location: string,
+  fetchFn: (name: string, hintLocation: string) => Promise<EmployerSignalStatus>,
+): Promise<EmployerSignalStatus> {
+  const cacheKey = buildEmployerStatusKey(name, location);
+  const cached = employerStatusCache.get(cacheKey);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
+
+  const pending = employerStatusRequests.get(cacheKey);
+  if (pending) {
+    return pending;
+  }
+
+  const request = fetchFn(name, location)
+    .catch(() => "no_data" as EmployerSignalStatus)
+    .then((status) => {
+      employerStatusCache.set(cacheKey, status);
+      employerStatusRequests.delete(cacheKey);
+      return status;
+    });
+  employerStatusRequests.set(cacheKey, request);
+  return request;
 }
 
 function formatBreakdown(breakdown: ScoreBreakdown, placeName: string): string {
@@ -147,6 +205,7 @@ export function scanAndAnnotate(
 
   const sendMessage = deps.sendMessage ?? chrome.runtime.sendMessage;
   const createRequestId = deps.createRequestId ?? (() => crypto.randomUUID());
+  const fetchEmployerStatusFn = deps.fetchEmployerStatus ?? fetchEmployerStatus;
 
   for (const card of cards) {
     const parsed = parseCard(card);
@@ -156,6 +215,21 @@ export function scanAndAnnotate(
 
     const badge = getOrCreateBadge(card);
     const locationName = parsed.locationText ?? "";
+
+    if (parsed.company) {
+      const employerKey = buildEmployerStatusKey(parsed.company, locationName);
+      badge.dataset.employerStatusKey = employerKey;
+      void resolveEmployerStatus(parsed.company, locationName, fetchEmployerStatusFn).then(
+        (status) => {
+          if (badge.dataset.employerStatusKey !== employerKey) {
+            return;
+          }
+          setEmployerTooltip(badge, status);
+        },
+      );
+    } else {
+      setEmployerTooltip(badge, "no_data");
+    }
 
     const requestKey = `${locationName}|${settings.homePostcode}|${settings.commuteMode}|${settings.officeDaysPerWeek}`;
     if (badge.dataset.requestKey === requestKey && badge.dataset.state === "done") {
