@@ -1,6 +1,6 @@
-# CarbonRank Jobs (MVP)
+# IsThisJobGreen? Jobs (MVP)
 
-Chrome Extension that adds a CarbonRank badge to Reed job cards. It estimates
+Chrome Extension that adds an IsThisJobGreen? badge to Reed job cards. It estimates
 commute-only annual CO2e using straight-line distance and UK emission factors.
 
 ## What it does
@@ -10,7 +10,7 @@ commute-only annual CO2e using straight-line distance and UK emission factors.
 - Resolves the place to a centroid using OS Open Names (local index).
 - Resolves your home postcode via Postcodes.io.
 - Calculates annual commute CO2e for the selected commute mode and office days.
-- Includes a CarbonRank Search page powered by an Adzuna proxy.
+- Includes an IsThisJobGreen? Search page powered by an Adzuna proxy.
 
 Badge states:
 
@@ -48,7 +48,7 @@ npm run build
   - Office days per week
 - Visit `https://www.reed.co.uk/jobs` and browse results.
 - Hover a badge to see the breakdown.
-- In the popup, click "Open CarbonRank Search" to run Adzuna searches.
+- In the popup, click "Open IsThisJobGreen? Search" to run Adzuna searches.
 
 ## Adzuna proxy
 
