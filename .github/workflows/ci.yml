@@ -43,6 +43,6 @@ jobs:
 
       - name: E2E nightly (headless)
         if: github.event_name == 'schedule'
-        run: npm run test:e2e
+        run: xvfb-run --auto-servernum -- npm run test:e2e
         env:
-          PLAYWRIGHT_HEADLESS: "1"
+          PLAYWRIGHT_HEADLESS: "0"

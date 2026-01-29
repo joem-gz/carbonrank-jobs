@@ -5,12 +5,18 @@ import {
   normalizePostcode,
   setSettings,
 } from "../storage/settings";
+import {
+  getProxyBaseUrl,
+  setProxyBaseUrl,
+  sanitizeProxyBaseUrl,
+} from "../storage/proxy";
 import { setAttributionLink } from "../ui/attribution";
 
 const form = document.querySelector<HTMLFormElement>("#settings-form");
 const postcodeInput = document.querySelector<HTMLInputElement>("#home-postcode");
 const commuteSelect = document.querySelector<HTMLSelectElement>("#commute-mode");
 const officeSelect = document.querySelector<HTMLSelectElement>("#office-days");
+const proxyBaseUrlInput = document.querySelector<HTMLInputElement>("#proxy-base-url");
 const statusEl = document.querySelector<HTMLParagraphElement>("#status");
 const openSearchButton = document.querySelector<HTMLButtonElement>("#open-search");
 const attributionLink = document.querySelector<HTMLAnchorElement>("#popup-attribution");
@@ -20,6 +26,7 @@ if (
   !postcodeInput ||
   !commuteSelect ||
   !officeSelect ||
+  !proxyBaseUrlInput ||
   !statusEl ||
   !openSearchButton ||
   !attributionLink
@@ -39,6 +46,7 @@ async function loadSettings(): Promise<void> {
   postcodeInput.value = settings.homePostcode;
   commuteSelect.value = settings.commuteMode;
   officeSelect.value = String(settings.officeDaysPerWeek);
+  proxyBaseUrlInput.value = await getProxyBaseUrl();
 }
 
 form.addEventListener("submit", async (event) => {
@@ -54,6 +62,7 @@ form.addEventListener("submit", async (event) => {
   }
 
   const normalised = rawPostcode ? normalizePostcode(rawPostcode) : "";
+  const proxyBaseUrlRaw = proxyBaseUrlInput.value.trim();
 
   await setSettings({
     homePostcode: normalised,
@@ -61,7 +70,11 @@ form.addEventListener("submit", async (event) => {
     officeDaysPerWeek,
   });
 
+  const sanitizedProxyBaseUrl = sanitizeProxyBaseUrl(proxyBaseUrlRaw);
+  await setProxyBaseUrl(sanitizedProxyBaseUrl);
+
   postcodeInput.value = normalised;
+  proxyBaseUrlInput.value = await getProxyBaseUrl();
   setStatus("Settings saved.");
 });
 

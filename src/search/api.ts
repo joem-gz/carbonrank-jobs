@@ -1,10 +1,9 @@
 import { ProxySearchResponse, SearchQuery } from "./types";
-
-export const DEFAULT_PROXY_BASE_URL = "http://localhost:8787";
+import { getProxyBaseUrl } from "../storage/proxy";
 
 export function buildProxyUrl(
   query: SearchQuery,
-  baseUrl: string = DEFAULT_PROXY_BASE_URL,
+  baseUrl: string,
 ): string {
   const url = new URL(baseUrl);
   url.pathname = "/api/jobs/search";
@@ -23,9 +22,10 @@ export function buildProxyUrl(
 export async function fetchProxyJobs(
   query: SearchQuery,
   fetchFn: typeof fetch = fetch,
-  baseUrl: string = DEFAULT_PROXY_BASE_URL,
+  baseUrl?: string,
 ): Promise<ProxySearchResponse> {
-  const url = buildProxyUrl(query, baseUrl);
+  const resolvedBaseUrl = baseUrl ?? (await getProxyBaseUrl());
+  const url = buildProxyUrl(query, resolvedBaseUrl);
   const response = await fetchFn(url);
   if (!response.ok) {
     throw new Error(`Proxy request failed with ${response.status}`);

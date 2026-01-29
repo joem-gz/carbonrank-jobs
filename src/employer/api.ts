@@ -10,8 +10,9 @@ import {
   FetchJsonResponseMessage,
 } from "../messages";
 import { normalizeEmployerName } from "./normalize";
+import { getProxyBaseUrl, DEFAULT_PROXY_BASE_URL } from "../storage/proxy";
 
-export const DEFAULT_EMPLOYER_API_BASE_URL = "http://localhost:8787";
+export const DEFAULT_EMPLOYER_API_BASE_URL = DEFAULT_PROXY_BASE_URL;
 const HIGH_CONFIDENCE_SCORE = 0.7;
 
 const resolveCache = new Map<string, EmployerResolveResponse>();
@@ -44,7 +45,7 @@ function buildSignalsCacheKey(companyNumber: string, companyName?: string): stri
 export function buildEmployerResolveUrl(
   name: string,
   hintLocation?: string,
-  baseUrl: string = DEFAULT_EMPLOYER_API_BASE_URL,
+  baseUrl: string,
 ): string {
   const url = new URL(baseUrl);
   url.pathname = "/api/employer/resolve";
@@ -58,7 +59,7 @@ export function buildEmployerResolveUrl(
 export function buildEmployerSignalsUrl(
   companyNumber: string,
   companyName?: string,
-  baseUrl: string = DEFAULT_EMPLOYER_API_BASE_URL,
+  baseUrl: string,
 ): string {
   const url = new URL(baseUrl);
   url.pathname = "/api/employer/signals";
@@ -124,6 +125,10 @@ async function fetchJson<T>(url: string, fetchFn?: typeof fetch): Promise<T> {
   return fetchJsonWithFetch(url, fetch);
 }
 
+async function resolveEmployerBaseUrl(options: FetchOptions): Promise<string> {
+  return options.baseUrl ?? (await getProxyBaseUrl());
+}
+
 export async function fetchEmployerResolve(
   name: string,
   hintLocation?: string,
@@ -135,7 +140,8 @@ export async function fetchEmployerResolve(
     return cached;
   }
 
-  const url = buildEmployerResolveUrl(name, hintLocation, options.baseUrl);
+  const baseUrl = await resolveEmployerBaseUrl(options);
+  const url = buildEmployerResolveUrl(name, hintLocation, baseUrl);
   const payload = await fetchJson<EmployerResolveResponse>(url, options.fetchFn);
   resolveCache.set(cacheKey, payload);
   return payload;
@@ -152,7 +158,8 @@ export async function fetchEmployerSignals(
     return cached;
   }
 
-  const url = buildEmployerSignalsUrl(companyNumber, companyName, options.baseUrl);
+  const baseUrl = await resolveEmployerBaseUrl(options);
+  const url = buildEmployerSignalsUrl(companyNumber, companyName, baseUrl);
   const payload = await fetchJson<EmployerSignalsResponse>(url, options.fetchFn);
   signalsCache.set(cacheKey, payload);
   return payload;
