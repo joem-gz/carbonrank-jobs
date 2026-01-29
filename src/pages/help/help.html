@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IsThisJobGreen? Help</title>
+    <link rel="stylesheet" href="help.css" />
+  </head>
+  <body>
+    <main class="help">
+      <header class="header">
+        <h1>IsThisJobGreen? Help</h1>
+        <p class="subtitle">
+          Guidance on setup, badge meanings, caveats, and data sources.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>How to use</h2>
+        <ol>
+          <li>Install and enable the extension (or embed the widget on your site).</li>
+          <li>Set your home postcode, commute mode, and office days per week.</li>
+          <li>Browse job listings or open a role to see the commute estimate badge.</li>
+        </ol>
+      </section>
+
+      <section class="card">
+        <h2>Badge states</h2>
+        <ul>
+          <li>Numeric value (e.g. 120 kgCO2e/yr) is an estimated annual commute.</li>
+          <li>0 kgCO2e/yr indicates a remote or work-from-home role.</li>
+          <li>No data / Unknown appears when a location is missing or too broad.</li>
+          <li>Set postcode prompts you to add a home postcode in settings.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Caveats</h2>
+        <ul>
+          <li>Commute CO2e is an estimate using straight-line distance.</li>
+          <li>Employer signals reflect sector baselines, not company footprints.</li>
+          <li>Data gaps happen with missing locations, agencies, or unclear employers.</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2>Sources</h2>
+        <ul>
+          <li>
+            <a
+              href="https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025"
+              target="_blank"
+              rel="noreferrer"
+              >UK GHG conversion factors</a
+            >
+          </li>
+          <li>
+            <a href="https://postcodes.io" target="_blank" rel="noreferrer">Postcodes.io</a>
+          </li>
+          <li>
+            <a
+              href="https://developer.company-information.service.gov.uk/"
+              target="_blank"
+              rel="noreferrer"
+              >Companies House API</a
+            >
+          </li>
+          <li>
+            <a href="https://www.ons.gov.uk/" target="_blank" rel="noreferrer"
+              >ONS sector intensity baselines</a
+            >
+          </li>
+          <li>
+            <a
+              href="https://sciencebasedtargets.org/companies-taking-action"
+              target="_blank"
+              rel="noreferrer"
+              >SBTi Companies Taking Action snapshot</a
+            >
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

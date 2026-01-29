@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { renderAll } from "../../widget/src/index";
+import { APP_NAME } from "../../src/ui/brand";
 
 function createDoc(html: string): Document {
   return new DOMParser().parseFromString(html, "text/html");
 }
 
-describe("CarbonRank widget", () => {
+describe(`${APP_NAME} widget`, () => {
   it("renders ok payloads from data attribute", () => {
     const doc = createDoc(
       `<!doctype html><body><span data-carbonrank='{"status":"ok","score":123}'></span></body>`,

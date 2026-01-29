@@ -5,9 +5,10 @@ import {
   ScoreResponseMessage,
 } from "./messages";
 import { scoreLocation } from "./scoring/location_scoring";
+import { APP_LOG_PREFIX } from "./ui/brand";
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.debug("[CarbonRank] Service worker installed");
+  console.debug(`${APP_LOG_PREFIX} Service worker installed`);
 });
 
 async function handleScoreRequest(message: ScoreRequestMessage): Promise<ScoreResponseMessage> {
@@ -57,7 +58,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     void handleScoreRequest(message)
       .then(sendResponse)
       .catch((error) => {
-        console.error("[CarbonRank] Score failed", error);
+        console.error(`${APP_LOG_PREFIX} Score failed`, error);
         const response: ScoreResponseMessage = {
           type: "score_response",
           requestId: message.requestId,
@@ -73,7 +74,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     void handleFetchJsonRequest(message)
       .then(sendResponse)
       .catch((error) => {
-        console.error("[CarbonRank] Fetch failed", error);
+        console.error(`${APP_LOG_PREFIX} Fetch failed`, error);
         const response: FetchJsonResponseMessage = {
           type: "fetch_json_response",
           ok: false,

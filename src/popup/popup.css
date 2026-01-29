@@ -76,3 +76,20 @@ select {
 .status[data-state="error"] {
   color: #8c2f20;
 }
+
+.popup__footer {
+  margin-top: 12px;
+  text-align: center;
+  font-size: 11px;
+  color: #3f4c4a;
+}
+
+.popup__attribution {
+  color: inherit;
+  text-decoration: none;
+}
+
+.popup__attribution:hover,
+.popup__attribution:focus-visible {
+  text-decoration: underline;
+}

@@ -29,6 +29,12 @@ async function copyStatic() {
     "src/pages/search/search.css",
     "dist/pages/search/search.css",
   );
+  await mkdir(resolve(distDir, "pages", "help"), { recursive: true });
+  await copyFile("src/pages/help/help.html", "dist/pages/help/help.html");
+  await copyFile("src/pages/help/help.css", "dist/pages/help/help.css");
+  await mkdir(resolve(distDir, "help"), { recursive: true });
+  await copyFile("src/pages/help/help.html", "dist/help/index.html");
+  await copyFile("src/pages/help/help.css", "dist/help/help.css");
 }
 
 async function watch() {

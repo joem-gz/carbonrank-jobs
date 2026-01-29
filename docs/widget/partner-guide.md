@@ -1,14 +1,14 @@
-# CarbonRank Widget Partner Guide
+# IsThisJobGreen? Widget Partner Guide
 
 ## Overview
-The CarbonRank widget renders commute CO2 badges for job listings and detail pages. Partners can integrate in two ways:
+The IsThisJobGreen? widget renders commute CO2 badges for job listings and detail pages. Partners can integrate in two ways:
 
 1) **Server-side render (SSR)** — compute scores server-side and inject into the page.
-2) **Client-side scan** — embed the widget script and let it fetch scores from the CarbonRank API.
+2) **Client-side scan** — embed the widget script and let it fetch scores from the IsThisJobGreen? API.
 
 ## Server-side render (preferred)
 
-1) Call the CarbonRank API from your backend.
+1) Call the IsThisJobGreen? API from your backend.
 2) Inject the response into the page:
 
 ```
@@ -71,7 +71,7 @@ Remote roles are treated as 0 kgCO2e/yr when:
 ## CSP and CORS
 
 - Add the widget CDN to `script-src` and `style-src`.
-- Add the CarbonRank API to `connect-src`.
+- Add the IsThisJobGreen? API to `connect-src`.
 - The widget API enforces `Origin` allowlists for partner domains.
 
 ## SRI (optional)

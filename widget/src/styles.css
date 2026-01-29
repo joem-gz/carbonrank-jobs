@@ -38,6 +38,12 @@
   align-items: center;
 }
 
+.carbonrank-widget__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .carbonrank-widget__how {
   border: 1px solid #0b6b5b;
   border-radius: 999px;
@@ -57,6 +63,16 @@
 .carbonrank-widget__attribution {
   font-size: 10px;
   color: #5b6f69;
+}
+
+.carbonrank-widget__attribution-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.carbonrank-widget__attribution-link:hover,
+.carbonrank-widget__attribution-link:focus-visible {
+  text-decoration: underline;
 }
 
 .carbonrank-widget__modal {
@@ -119,4 +135,81 @@
 
 .carbonrank-widget__modal-body p:last-child {
   margin-bottom: 0;
+}
+
+.carbonrank-widget__modal-section {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0b3f35;
+}
+
+.carbonrank-widget__modal-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: #37534c;
+}
+
+.carbonrank-widget__modal-list-item {
+  list-style: disc;
+}
+
+.carbonrank-widget__modal-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #0b3f35;
+}
+
+.carbonrank-widget .carbonrank-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.carbonrank-widget .carbonrank-tooltip__trigger {
+  border: none;
+  background: #d6ece5;
+  color: #0b3f35;
+  border-radius: 999px;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.carbonrank-widget .carbonrank-tooltip__trigger:focus-visible {
+  outline: 2px solid #0b6b5b;
+  outline-offset: 2px;
+}
+
+.carbonrank-widget .carbonrank-tooltip__content {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0b3f35;
+  color: #ffffff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  width: 200px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1;
+  text-align: left;
+}
+
+.carbonrank-widget .carbonrank-tooltip:focus-within .carbonrank-tooltip__content,
+.carbonrank-widget .carbonrank-tooltip:hover .carbonrank-tooltip__content {
+  opacity: 1;
+  visibility: visible;
 }

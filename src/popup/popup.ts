@@ -5,6 +5,7 @@ import {
   normalizePostcode,
   setSettings,
 } from "../storage/settings";
+import { setAttributionLink } from "../ui/attribution";
 
 const form = document.querySelector<HTMLFormElement>("#settings-form");
 const postcodeInput = document.querySelector<HTMLInputElement>("#home-postcode");
@@ -12,6 +13,7 @@ const commuteSelect = document.querySelector<HTMLSelectElement>("#commute-mode")
 const officeSelect = document.querySelector<HTMLSelectElement>("#office-days");
 const statusEl = document.querySelector<HTMLParagraphElement>("#status");
 const openSearchButton = document.querySelector<HTMLButtonElement>("#open-search");
+const attributionLink = document.querySelector<HTMLAnchorElement>("#popup-attribution");
 
 if (
   !form ||
@@ -19,10 +21,13 @@ if (
   !commuteSelect ||
   !officeSelect ||
   !statusEl ||
-  !openSearchButton
+  !openSearchButton ||
+  !attributionLink
 ) {
   throw new Error("Popup DOM missing required elements");
 }
+
+setAttributionLink(attributionLink);
 
 function setStatus(message: string, state: "ok" | "error" = "ok"): void {
   statusEl.textContent = message;
